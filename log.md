@@ -85,3 +85,11 @@
 - Created: wiki/entities/tteokbokki.md
 - Created: wiki/entities/korean-cuisine.md
 - Created: wiki/entities/eric-kim.md
+
+## [2026-04-26] ingest | Creamy Asparagus Pasta With Peas and Mint Recipe • 5★ • 30 min
+
+- Source: raw/articles/Creamy Asparagus Pasta With Peas and Mint Recipe • 5★ • 30 min.md
+- Created: wiki/sources/creamy-asparagus-pasta-with-peas-and-mint.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/melissa-clark.md
+- Updated: wiki/entities/italian-cuisine.md

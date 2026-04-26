@@ -33,6 +33,7 @@
 - [[Cheesy Baked Pasta With Sausage and Ricotta]] — Recipe for Cheesy Baked Pasta With Sausage and Ricotta
 - [[Cheesy Baked Pumpkin Pasta With Kale]] — Recipe for Cheesy Baked Pumpkin Pasta With Kale
 - [[Cheesy Cabbage Tteokbokki]] — Recipe for Cheesy Cabbage Tteokbokki
+- [[Creamy Asparagus Pasta With Peas and Mint]] — Recipe for Creamy Asparagus Pasta With Peas and Mint
 - [[Intro to Large Language Models]] — Karpathy's general-audience lecture on what LLMs are and where they're heading
 - [[Lonely Planet Spain (13th Edition)]] — Comprehensive Spain travel guide; this ingest covers six major Korean tourist destinations
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
