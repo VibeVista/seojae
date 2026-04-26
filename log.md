@@ -101,3 +101,11 @@
 - Created: wiki/entities/alexa-weibel.md
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] ingest | Five-Ingredient Creamy Miso Pasta Recipe • 5★ • 20 min
+
+- Source: raw/articles/Five-Ingredient Creamy Miso Pasta Recipe • 5★ • 20 min.md
+- Created: wiki/sources/five-ingredient-creamy-miso-pasta.md
+- Created: wiki/entities/japanese-cuisine.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/alexa-weibel.md

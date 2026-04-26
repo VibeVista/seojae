@@ -11,6 +11,7 @@
 - [[Eric Kim]] — Related to recipes
 - [[Granada]] — Alhambra palace complex, Albayzín quarter, Sierra Nevada backdrop
 - [[Italian Cuisine]] — Related to recipes
+- [[Japanese Cuisine]] — Related to recipes
 - [[Korean Cuisine]] — Related to recipes
 - [[La Sagrada Família]] — Gaudí's unfinished masterpiece basilica in Barcelona
 - [[Madrid]] — Spain's capital; world-class museums, Royal Palace, tapas culture
@@ -36,6 +37,7 @@
 - [[Cheesy Cabbage Tteokbokki]] — Recipe for Cheesy Cabbage Tteokbokki
 - [[Creamy Asparagus Pasta With Peas and Mint]] — Recipe for Creamy Asparagus Pasta With Peas and Mint
 - [[Creamy Chickpea Pasta With Spinach and Rosemary]] — Recipe for Creamy Chickpea Pasta With Spinach and Rosemary
+- [[Five-Ingredient Creamy Miso Pasta]] — Recipe for Five-Ingredient Creamy Miso Pasta
 - [[Intro to Large Language Models]] — Karpathy's general-audience lecture on what LLMs are and where they're heading
 - [[Lonely Planet Spain (13th Edition)]] — Comprehensive Spain travel guide; this ingest covers six major Korean tourist destinations
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm

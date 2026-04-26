@@ -1,11 +1,10 @@
 ---
-title: "Alexa Weibel"
+title: "Japanese Cuisine"
 type: entity
 created: 2026-04-26
 ---
 
-# Alexa Weibel
+# Japanese Cuisine
 
 Related recipes:
-- [[Creamy Chickpea Pasta With Spinach and Rosemary]]
 - [[Five-Ingredient Creamy Miso Pasta]]
