@@ -1,0 +1,10 @@
+---
+title: "Melissa Clark"
+type: entity
+created: 2026-04-26
+---
+
+# Melissa Clark
+
+Related recipes:
+- [[Cheesy Baked Pasta With Sausage and Ricotta]]

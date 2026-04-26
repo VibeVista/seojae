@@ -61,3 +61,11 @@
 - Created: wiki/entities/alison-roman.md
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] ingest | Cheesy Baked Pasta With Sausage and Ricotta Recipe (with Video) • 5★ • 45 min
+
+- Source: raw/articles/Cheesy Baked Pasta With Sausage and Ricotta Recipe (with Video) • 5★ • 45 min.md
+- Created: wiki/sources/cheesy-baked-pasta-with-sausage-and-ricotta.md
+- Created: wiki/entities/melissa-clark.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/italian-cuisine.md

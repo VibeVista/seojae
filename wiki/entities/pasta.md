@@ -9,3 +9,4 @@ created: 2026-04-26
 Related recipes:
 - [[Blistered Broccoli Pasta With Walnuts, Pecorino and Mint]]
 - [[Caramelized Shallot Pasta]]
+- [[Cheesy Baked Pasta With Sausage and Ricotta]]
