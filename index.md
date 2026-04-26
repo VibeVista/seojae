@@ -27,4 +27,5 @@
 ## Synthesis
 
 - [[Karpathy's Software Evolution: 1.0 → 2.0 → Vibe Coding]] — Tracing the arc of Karpathy's vision for the future of programming
+- [[바르셀로나 오디오 가이드]] — 주요 명소 5곳 한국어 오디오 가이드 스크립트 (사그라다 파밀리아, 구엘 공원, 고딕 지구, 몬주이크, 바르셀로네타)
 - [[한국인을 위한 스페인 여행 가이드]] — Comprehensive Spain travel guide from a Korean tourist perspective; itineraries, tips, and practical info
