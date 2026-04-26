@@ -233,3 +233,5 @@
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/lidey-heuck.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] check-new | 24 new sources processed
