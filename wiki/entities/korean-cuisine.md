@@ -10,3 +10,4 @@ Related recipes:
 - [[Cheesy Cabbage Tteokbokki]]
 - [[Gungjung Tteokbokki (Korean Royal Court Rice Cakes)]]
 - [[Hanjan Chicken Wings]]
+- [[Maangchi’s Cheese Buldak (Fire Chicken)]]

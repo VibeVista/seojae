@@ -132,3 +132,10 @@
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/melissa-clark.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] ingest | Maangchi’s Cheese Buldak (Fire Chicken) Recipe • 5★ • 30 min
+
+- Source: raw/articles/Maangchi’s Cheese Buldak (Fire Chicken) Recipe • 5★ • 30 min.md
+- Created: wiki/sources/maangchis-cheese-buldak-fire-chicken.md
+- Created: wiki/entities/sam-sifton.md
+- Updated: wiki/entities/korean-cuisine.md
