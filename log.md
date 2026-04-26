@@ -77,3 +77,11 @@
 - Created: wiki/entities/sarah-jampel.md
 - Updated: wiki/entities/italian-cuisine.md
 - Updated: wiki/entities/pasta.md
+
+## [2026-04-26] ingest | Cheesy Cabbage Tteokbokki Recipe • 5★ • 30 min
+
+- Source: raw/articles/Cheesy Cabbage Tteokbokki Recipe • 5★ • 30 min.md
+- Created: wiki/sources/cheesy-cabbage-tteokbokki.md
+- Created: wiki/entities/tteokbokki.md
+- Created: wiki/entities/korean-cuisine.md
+- Created: wiki/entities/eric-kim.md
