@@ -20,3 +20,4 @@ Related recipes:
 - [[Pasta Alla Norma]]
 - [[Pasta Primavera With Asparagus and Peas]]
 - [[Pasta With Asparagus, Arugula and Ricotta]]
+- [[Pasta With Garlicky Spinach and Buttered Pistachios]]

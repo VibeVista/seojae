@@ -179,3 +179,11 @@
 - Created: wiki/entities/martha-rose-shulman.md
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] ingest | Pasta With Garlicky Spinach and Buttered Pistachios Recipe • 5★ • 25 min
+
+- Source: raw/articles/Pasta With Garlicky Spinach and Buttered Pistachios Recipe • 5★ • 25 min.md
+- Created: wiki/sources/pasta-with-garlicky-spinach-and-buttered-pistachios.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/italian-cuisine.md
+- Updated: wiki/entities/dawn-perry.md

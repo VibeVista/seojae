@@ -8,3 +8,4 @@ created: 2026-04-26
 
 Related recipes:
 - [[Blistered Broccoli Pasta With Walnuts, Pecorino and Mint]]
+- [[Pasta With Garlicky Spinach and Buttered Pistachios]]

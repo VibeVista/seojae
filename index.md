@@ -55,6 +55,7 @@
 - [[Pasta Alla Norma]] — Recipe for Pasta Alla Norma
 - [[Pasta Primavera With Asparagus and Peas]] — Recipe for Pasta Primavera With Asparagus and Peas
 - [[Pasta With Asparagus, Arugula and Ricotta]] — Recipe for Pasta With Asparagus, Arugula and Ricotta
+- [[Pasta With Garlicky Spinach and Buttered Pistachios]] — Recipe for Pasta With Garlicky Spinach and Buttered Pistachios
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
 - [[Vibe Coding — Karpathy]] — Karpathy's original post coining "vibe coding"
 
