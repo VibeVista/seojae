@@ -8,3 +8,4 @@ created: 2026-04-26
 
 Related recipes:
 - [[Pasta Alla Genovese]]
+- [[Pasta Alla Norma]]

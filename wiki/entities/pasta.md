@@ -17,3 +17,4 @@ Related recipes:
 - [[Lemony Pasta With Chickpeas and Parsley]]
 - [[One-Pot Miso-Mascarpone Pasta]]
 - [[Pasta Alla Genovese]]
+- [[Pasta Alla Norma]]

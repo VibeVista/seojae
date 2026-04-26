@@ -15,3 +15,4 @@ Related recipes:
 - [[Creamy Chickpea Pasta With Spinach and Rosemary]]
 - [[Lemony Pasta With Chickpeas and Parsley]]
 - [[Pasta Alla Genovese]]
+- [[Pasta Alla Norma]]

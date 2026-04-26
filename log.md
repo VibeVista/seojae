@@ -155,3 +155,11 @@
 - Created: wiki/entities/mark-bittman.md
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] ingest | Pasta Alla Norma Recipe • 5★ • About 45 min
+
+- Source: raw/articles/Pasta Alla Norma Recipe • 5★ • About 45 min.md
+- Created: wiki/sources/pasta-alla-norma.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/mark-bittman.md
+- Updated: wiki/entities/italian-cuisine.md
