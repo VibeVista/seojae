@@ -19,3 +19,8 @@ search-index/
 .remember/
 .ouroboros/
 .envrc
+
+# Raw book PDFs (large files, not tracked in git)
+raw/books/best-road-trips-europe-2.pdf
+raw/books/portugal.pdf
+raw/books/spain.pdf
