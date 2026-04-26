@@ -147,3 +147,11 @@
 - Created: wiki/entities/sarah-digregorio.md
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/japanese-cuisine.md
+
+## [2026-04-26] ingest | Pasta Alla Genovese Recipe • 5★ • 3 1/2 hrs
+
+- Source: raw/articles/Pasta Alla Genovese Recipe • 5★ • 3 12 hrs.md
+- Created: wiki/sources/pasta-alla-genovese.md
+- Created: wiki/entities/mark-bittman.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/italian-cuisine.md

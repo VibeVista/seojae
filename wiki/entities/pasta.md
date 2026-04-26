@@ -16,3 +16,4 @@ Related recipes:
 - [[Five-Ingredient Creamy Miso Pasta]]
 - [[Lemony Pasta With Chickpeas and Parsley]]
 - [[One-Pot Miso-Mascarpone Pasta]]
+- [[Pasta Alla Genovese]]
