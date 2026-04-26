@@ -2,6 +2,7 @@
 
 ## Entities
 
+- [[Alexa Weibel]] — Related to recipes
 - [[Alhambra]] — Moorish palace-fortress in Granada; Spain's second most-visited site
 - [[Alison Roman]] — Related to recipes
 - [[Andrej Karpathy]] — AI researcher, educator, coined "vibe coding" and "Software 2.0"
@@ -34,6 +35,7 @@
 - [[Cheesy Baked Pumpkin Pasta With Kale]] — Recipe for Cheesy Baked Pumpkin Pasta With Kale
 - [[Cheesy Cabbage Tteokbokki]] — Recipe for Cheesy Cabbage Tteokbokki
 - [[Creamy Asparagus Pasta With Peas and Mint]] — Recipe for Creamy Asparagus Pasta With Peas and Mint
+- [[Creamy Chickpea Pasta With Spinach and Rosemary]] — Recipe for Creamy Chickpea Pasta With Spinach and Rosemary
 - [[Intro to Large Language Models]] — Karpathy's general-audience lecture on what LLMs are and where they're heading
 - [[Lonely Planet Spain (13th Edition)]] — Comprehensive Spain travel guide; this ingest covers six major Korean tourist destinations
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm

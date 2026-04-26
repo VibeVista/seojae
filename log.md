@@ -93,3 +93,11 @@
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/melissa-clark.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] ingest | Creamy Chickpea Pasta With Spinach and Rosemary Recipe • 5★ • 30 min
+
+- Source: raw/articles/Creamy Chickpea Pasta With Spinach and Rosemary Recipe • 5★ • 30 min.md
+- Created: wiki/sources/creamy-chickpea-pasta-with-spinach-and-rosemary.md
+- Created: wiki/entities/alexa-weibel.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/italian-cuisine.md
