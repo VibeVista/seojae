@@ -235,3 +235,4 @@
 - Updated: wiki/entities/italian-cuisine.md
 
 ## [2026-04-26] check-new | 24 new sources processed
+## [2026-04-26] lint | removed all Spain travel related content
