@@ -9,3 +9,4 @@ created: 2026-04-26
 Related recipes:
 - [[Creamy Chickpea Pasta With Spinach and Rosemary]]
 - [[Five-Ingredient Creamy Miso Pasta]]
+- [[Spicy and Saucy Cherry Tomato Pasta]]

@@ -217,3 +217,11 @@
 - Created: wiki/sources/roy-chois-braised-short-rib-stew.md
 - Updated: wiki/entities/korean-cuisine.md
 - Updated: wiki/entities/sam-sifton.md
+
+## [2026-04-26] ingest | Spicy and Saucy Cherry Tomato Pasta Recipe • 5★ • 25 min
+
+- Source: raw/articles/Spicy and Saucy Cherry Tomato Pasta Recipe • 5★ • 25 min.md
+- Created: wiki/sources/spicy-and-saucy-cherry-tomato-pasta.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/italian-cuisine.md
+- Updated: wiki/entities/alexa-weibel.md

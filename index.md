@@ -62,6 +62,7 @@
 - [[Pressure Cooker Bo Ssam]] — Recipe for Pressure Cooker Bo Ssam
 - [[Roy Choi’s Braised Short-Rib Stew]] — Recipe for Roy Choi’s Braised Short-Rib Stew
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
+- [[Spicy and Saucy Cherry Tomato Pasta]] — Recipe for Spicy and Saucy Cherry Tomato Pasta
 - [[Vibe Coding — Karpathy]] — Karpathy's original post coining "vibe coding"
 
 ## Synthesis
