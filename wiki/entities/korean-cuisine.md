@@ -11,3 +11,4 @@ Related recipes:
 - [[Gungjung Tteokbokki (Korean Royal Court Rice Cakes)]]
 - [[Hanjan Chicken Wings]]
 - [[Maangchi’s Cheese Buldak (Fire Chicken)]]
+- [[Pressure Cooker Bo Ssam]]

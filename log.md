@@ -203,3 +203,10 @@
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/melissa-clark.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] ingest | Pressure Cooker Bo Ssam Recipe • 4★ • 1 hr
+
+- Source: raw/articles/Pressure Cooker Bo Ssam Recipe • 4★ • 1 hr.md
+- Created: wiki/sources/pressure-cooker-bo-ssam.md
+- Updated: wiki/entities/korean-cuisine.md
+- Updated: wiki/entities/kay-chun.md
