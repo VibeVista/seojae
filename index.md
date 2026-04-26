@@ -15,6 +15,7 @@
 - [[Kay Chun]] — Related to recipes
 - [[Korean Cuisine]] — Related to recipes
 - [[La Sagrada Família]] — Gaudí's unfinished masterpiece basilica in Barcelona
+- [[Lidey Heuck]] — Related to recipes
 - [[Madrid]] — Spain's capital; world-class museums, Royal Palace, tapas culture
 - [[Mark Bittman]] — Related to recipes
 - [[Martha Rose Shulman]] — Related to recipes
@@ -56,6 +57,7 @@
 - [[Pasta Primavera With Asparagus and Peas]] — Recipe for Pasta Primavera With Asparagus and Peas
 - [[Pasta With Asparagus, Arugula and Ricotta]] — Recipe for Pasta With Asparagus, Arugula and Ricotta
 - [[Pasta With Garlicky Spinach and Buttered Pistachios]] — Recipe for Pasta With Garlicky Spinach and Buttered Pistachios
+- [[Pasta With Spicy Sausage, Broccoli Rabe and Chickpeas]] — Recipe for Pasta With Spicy Sausage, Broccoli Rabe and Chickpeas
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
 - [[Vibe Coding — Karpathy]] — Karpathy's original post coining "vibe coding"
 

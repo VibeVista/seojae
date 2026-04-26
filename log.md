@@ -187,3 +187,11 @@
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/italian-cuisine.md
 - Updated: wiki/entities/dawn-perry.md
+
+## [2026-04-26] ingest | Pasta With Spicy Sausage, Broccoli Rabe and Chickpeas Recipe • 5★ • 30 min
+
+- Source: raw/articles/Pasta With Spicy Sausage, Broccoli Rabe and Chickpeas Recipe • 5★ • 30 min.md
+- Created: wiki/sources/pasta-with-spicy-sausage-broccoli-rabe-and-chickpeas.md
+- Created: wiki/entities/lidey-heuck.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/italian-cuisine.md
