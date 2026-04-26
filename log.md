@@ -210,3 +210,10 @@
 - Created: wiki/sources/pressure-cooker-bo-ssam.md
 - Updated: wiki/entities/korean-cuisine.md
 - Updated: wiki/entities/kay-chun.md
+
+## [2026-04-26] ingest | Roy Choi’s Braised Short-Rib Stew Recipe • 4★ • 3 1/2 hrs
+
+- Source: raw/articles/Roy Choi’s Braised Short-Rib Stew Recipe • 4★ • 3 12 hrs.md
+- Created: wiki/sources/roy-chois-braised-short-rib-stew.md
+- Updated: wiki/entities/korean-cuisine.md
+- Updated: wiki/entities/sam-sifton.md

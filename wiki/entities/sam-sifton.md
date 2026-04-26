@@ -8,3 +8,4 @@ created: 2026-04-26
 
 Related recipes:
 - [[Maangchi’s Cheese Buldak (Fire Chicken)]]
+- [[Roy Choi’s Braised Short-Rib Stew]]
