@@ -13,3 +13,4 @@ Related recipes:
 - [[Cheesy Baked Pumpkin Pasta With Kale]]
 - [[Creamy Asparagus Pasta With Peas and Mint]]
 - [[Creamy Chickpea Pasta With Spinach and Rosemary]]
+- [[Lemony Pasta With Chickpeas and Parsley]]

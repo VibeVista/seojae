@@ -43,6 +43,7 @@
 - [[Gungjung Tteokbokki (Korean Royal Court Rice Cakes)]] — Recipe for Gungjung Tteokbokki (Korean Royal Court Rice Cakes)
 - [[Hanjan Chicken Wings]] — Recipe for Hanjan Chicken Wings
 - [[Intro to Large Language Models]] — Karpathy's general-audience lecture on what LLMs are and where they're heading
+- [[Lemony Pasta With Chickpeas and Parsley]] — Recipe for Lemony Pasta With Chickpeas and Parsley
 - [[Lonely Planet Spain (13th Edition)]] — Comprehensive Spain travel guide; this ingest covers six major Korean tourist destinations
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
 - [[Vibe Coding — Karpathy]] — Karpathy's original post coining "vibe coding"

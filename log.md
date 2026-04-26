@@ -124,3 +124,11 @@
 - Created: wiki/sources/hanjan-chicken-wings.md
 - Created: wiki/entities/the-new-york-times.md
 - Updated: wiki/entities/korean-cuisine.md
+
+## [2026-04-26] ingest | Lemony Pasta With Chickpeas and Parsley Recipe • 5★ • 30 min
+
+- Source: raw/articles/Lemony Pasta With Chickpeas and Parsley Recipe • 5★ • 30 min.md
+- Created: wiki/sources/lemony-pasta-with-chickpeas-and-parsley.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/melissa-clark.md
+- Updated: wiki/entities/italian-cuisine.md

@@ -14,3 +14,4 @@ Related recipes:
 - [[Creamy Asparagus Pasta With Peas and Mint]]
 - [[Creamy Chickpea Pasta With Spinach and Rosemary]]
 - [[Five-Ingredient Creamy Miso Pasta]]
+- [[Lemony Pasta With Chickpeas and Parsley]]
