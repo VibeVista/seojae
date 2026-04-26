@@ -1,11 +1,10 @@
 ---
-title: "Japanese Cuisine"
+title: "Sarah DiGregorio"
 type: entity
 created: 2026-04-26
 ---
 
-# Japanese Cuisine
+# Sarah DiGregorio
 
 Related recipes:
-- [[Five-Ingredient Creamy Miso Pasta]]
 - [[One-Pot Miso-Mascarpone Pasta]]

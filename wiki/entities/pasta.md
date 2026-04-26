@@ -15,3 +15,4 @@ Related recipes:
 - [[Creamy Chickpea Pasta With Spinach and Rosemary]]
 - [[Five-Ingredient Creamy Miso Pasta]]
 - [[Lemony Pasta With Chickpeas and Parsley]]
+- [[One-Pot Miso-Mascarpone Pasta]]

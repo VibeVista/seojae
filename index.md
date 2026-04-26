@@ -19,6 +19,7 @@
 - [[Melissa Clark]] — Related to recipes
 - [[Pasta]] — Related to recipes
 - [[Sam Sifton]] — Related to recipes
+- [[Sarah DiGregorio]] — Related to recipes
 - [[Sarah Jampel]] — Related to recipes
 - [[Segovia]] — Roman aqueduct, fairy-tale Alcázar castle, cochinillo asado specialty
 - [[Seville]] — Andalucía's capital; flamenco, Real Alcázar, Catedral & Giralda
@@ -47,6 +48,7 @@
 - [[Lemony Pasta With Chickpeas and Parsley]] — Recipe for Lemony Pasta With Chickpeas and Parsley
 - [[Lonely Planet Spain (13th Edition)]] — Comprehensive Spain travel guide; this ingest covers six major Korean tourist destinations
 - [[Maangchi’s Cheese Buldak (Fire Chicken)]] — Recipe for Maangchi’s Cheese Buldak (Fire Chicken)
+- [[One-Pot Miso-Mascarpone Pasta]] — Recipe for One-Pot Miso-Mascarpone Pasta
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
 - [[Vibe Coding — Karpathy]] — Karpathy's original post coining "vibe coding"
 

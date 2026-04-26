@@ -139,3 +139,11 @@
 - Created: wiki/sources/maangchis-cheese-buldak-fire-chicken.md
 - Created: wiki/entities/sam-sifton.md
 - Updated: wiki/entities/korean-cuisine.md
+
+## [2026-04-26] ingest | One-Pot Miso-Mascarpone Pasta Recipe • 5★ • 30 min
+
+- Source: raw/articles/One-Pot Miso-Mascarpone Pasta Recipe • 5★ • 30 min.md
+- Created: wiki/sources/one-pot-miso-mascarpone-pasta.md
+- Created: wiki/entities/sarah-digregorio.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/japanese-cuisine.md
