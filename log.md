@@ -109,3 +109,11 @@
 - Created: wiki/entities/japanese-cuisine.md
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/alexa-weibel.md
+
+## [2026-04-26] ingest | Gungjung Tteokbokki (Korean Royal Court Rice Cakes) Recipe • 4★ • 40 min
+
+- Source: raw/articles/Gungjung Tteokbokki (Korean Royal Court Rice Cakes) Recipe • 4★ • 40 min.md
+- Created: wiki/sources/gungjung-tteokbokki-korean-royal-court-rice-cakes.md
+- Created: wiki/entities/kay-chun.md
+- Updated: wiki/entities/tteokbokki.md
+- Updated: wiki/entities/korean-cuisine.md
