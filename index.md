@@ -17,6 +17,7 @@
 - [[La Sagrada Família]] — Gaudí's unfinished masterpiece basilica in Barcelona
 - [[Madrid]] — Spain's capital; world-class museums, Royal Palace, tapas culture
 - [[Mark Bittman]] — Related to recipes
+- [[Martha Rose Shulman]] — Related to recipes
 - [[Melissa Clark]] — Related to recipes
 - [[Pasta]] — Related to recipes
 - [[Sam Sifton]] — Related to recipes
@@ -53,6 +54,7 @@
 - [[Pasta Alla Genovese]] — Recipe for Pasta Alla Genovese
 - [[Pasta Alla Norma]] — Recipe for Pasta Alla Norma
 - [[Pasta Primavera With Asparagus and Peas]] — Recipe for Pasta Primavera With Asparagus and Peas
+- [[Pasta With Asparagus, Arugula and Ricotta]] — Recipe for Pasta With Asparagus, Arugula and Ricotta
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
 - [[Vibe Coding — Karpathy]] — Karpathy's original post coining "vibe coding"
 

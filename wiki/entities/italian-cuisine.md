@@ -17,3 +17,4 @@ Related recipes:
 - [[Pasta Alla Genovese]]
 - [[Pasta Alla Norma]]
 - [[Pasta Primavera With Asparagus and Peas]]
+- [[Pasta With Asparagus, Arugula and Ricotta]]

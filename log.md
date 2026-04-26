@@ -171,3 +171,11 @@
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/melissa-clark.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] ingest | Pasta With Asparagus, Arugula and Ricotta Recipe • 5★ • 15 min
+
+- Source: raw/articles/Pasta With Asparagus, Arugula and Ricotta Recipe • 5★ • 15 min.md
+- Created: wiki/sources/pasta-with-asparagus-arugula-and-ricotta.md
+- Created: wiki/entities/martha-rose-shulman.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/italian-cuisine.md
