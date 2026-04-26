@@ -117,3 +117,10 @@
 - Created: wiki/entities/kay-chun.md
 - Updated: wiki/entities/tteokbokki.md
 - Updated: wiki/entities/korean-cuisine.md
+
+## [2026-04-26] ingest | Hanjan Chicken Wings Recipe • 4★ • 45 min
+
+- Source: raw/articles/Hanjan Chicken Wings Recipe • 4★ • 45 min.md
+- Created: wiki/sources/hanjan-chicken-wings.md
+- Created: wiki/entities/the-new-york-times.md
+- Updated: wiki/entities/korean-cuisine.md

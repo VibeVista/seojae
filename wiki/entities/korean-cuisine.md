@@ -9,3 +9,4 @@ created: 2026-04-26
 Related recipes:
 - [[Cheesy Cabbage Tteokbokki]]
 - [[Gungjung Tteokbokki (Korean Royal Court Rice Cakes)]]
+- [[Hanjan Chicken Wings]]

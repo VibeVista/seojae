@@ -21,6 +21,7 @@
 - [[Sarah Jampel]] — Related to recipes
 - [[Segovia]] — Roman aqueduct, fairy-tale Alcázar castle, cochinillo asado specialty
 - [[Seville]] — Andalucía's capital; flamenco, Real Alcázar, Catedral & Giralda
+- [[The New York Times]] — Related to recipes
 - [[Toledo]] — Medieval walled city; UNESCO World Heritage; Catedral, El Greco
 - [[Tteokbokki]] — Related to recipes
 
@@ -40,6 +41,7 @@
 - [[Creamy Chickpea Pasta With Spinach and Rosemary]] — Recipe for Creamy Chickpea Pasta With Spinach and Rosemary
 - [[Five-Ingredient Creamy Miso Pasta]] — Recipe for Five-Ingredient Creamy Miso Pasta
 - [[Gungjung Tteokbokki (Korean Royal Court Rice Cakes)]] — Recipe for Gungjung Tteokbokki (Korean Royal Court Rice Cakes)
+- [[Hanjan Chicken Wings]] — Recipe for Hanjan Chicken Wings
 - [[Intro to Large Language Models]] — Karpathy's general-audience lecture on what LLMs are and where they're heading
 - [[Lonely Planet Spain (13th Edition)]] — Comprehensive Spain travel guide; this ingest covers six major Korean tourist destinations
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
