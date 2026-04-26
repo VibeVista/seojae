@@ -45,3 +45,11 @@
 - Created: wiki/entities/la-sagrada-familia.md
 - Created: wiki/entities/alhambra.md
 - Created: wiki/synthesis/korea-spain-travel-guide.md
+
+## [2026-04-26] ingest | Blistered Broccoli Pasta With Walnuts, Pecorino and Mint Recipe • 5★ • 15 min
+
+- Source: raw/articles/Blistered Broccoli Pasta With Walnuts, Pecorino and Mint Recipe • 5★ • 15 min.md
+- Created: wiki/sources/blistered-broccoli-pasta-with-walnuts-pecorino-and-mint.md
+- Created: wiki/entities/pasta.md
+- Created: wiki/entities/italian-cuisine.md
+- Created: wiki/entities/dawn-perry.md
