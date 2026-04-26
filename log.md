@@ -53,3 +53,11 @@
 - Created: wiki/entities/pasta.md
 - Created: wiki/entities/italian-cuisine.md
 - Created: wiki/entities/dawn-perry.md
+
+## [2026-04-26] ingest | Caramelized Shallot Pasta Recipe (with Video) • 5★ • 40 min
+
+- Source: raw/articles/Caramelized Shallot Pasta Recipe (with Video) • 5★ • 40 min.md
+- Created: wiki/sources/caramelized-shallot-pasta.md
+- Created: wiki/entities/alison-roman.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/italian-cuisine.md

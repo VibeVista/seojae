@@ -3,6 +3,7 @@
 ## Entities
 
 - [[Alhambra]] — Moorish palace-fortress in Granada; Spain's second most-visited site
+- [[Alison Roman]] — Related to recipes
 - [[Andrej Karpathy]] — AI researcher, educator, coined "vibe coding" and "Software 2.0"
 - [[Barcelona]] — Catalonia's capital; Gaudí architecture, Gothic Quarter, Montjuïc
 - [[Dawn Perry]] — Related to recipes
@@ -23,6 +24,7 @@
 ## Sources
 
 - [[Blistered Broccoli Pasta With Walnuts, Pecorino and Mint]] — Recipe for Blistered Broccoli Pasta With Walnuts, Pecorino and Mint
+- [[Caramelized Shallot Pasta]] — Recipe for Caramelized Shallot Pasta
 - [[Intro to Large Language Models]] — Karpathy's general-audience lecture on what LLMs are and where they're heading
 - [[Lonely Planet Spain (13th Edition)]] — Comprehensive Spain travel guide; this ingest covers six major Korean tourist destinations
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
