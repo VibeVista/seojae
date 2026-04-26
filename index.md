@@ -63,6 +63,7 @@
 - [[Roy Choi’s Braised Short-Rib Stew]] — Recipe for Roy Choi’s Braised Short-Rib Stew
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
 - [[Spicy and Saucy Cherry Tomato Pasta]] — Recipe for Spicy and Saucy Cherry Tomato Pasta
+- [[Tuna Pasta Salad]] — Recipe for Tuna Pasta Salad
 - [[Vibe Coding — Karpathy]] — Karpathy's original post coining "vibe coding"
 
 ## Synthesis

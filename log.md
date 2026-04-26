@@ -225,3 +225,11 @@
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/italian-cuisine.md
 - Updated: wiki/entities/alexa-weibel.md
+
+## [2026-04-26] ingest | Tuna Pasta Salad Recipe • 5★ • 35 min
+
+- Source: raw/articles/Tuna Pasta Salad Recipe • 5★ • 35 min.md
+- Created: wiki/sources/tuna-pasta-salad.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/lidey-heuck.md
+- Updated: wiki/entities/italian-cuisine.md

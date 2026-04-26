@@ -24,3 +24,4 @@ Related recipes:
 - [[Pasta With Spicy Sausage, Broccoli Rabe and Chickpeas]]
 - [[Pasta With Spicy Sausages, Tomatoes, Rosemary and Olives]]
 - [[Spicy and Saucy Cherry Tomato Pasta]]
+- [[Tuna Pasta Salad]]
