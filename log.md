@@ -23,3 +23,18 @@
 
 - Created: wiki/synthesis/karpathy-software-evolution.md
 - Cross-referenced: Software 2.0, Vibe Coding, Andrej Karpathy
+
+## [2026-04-26] ingest | Lonely Planet Spain 13th Edition
+
+- Source: raw/books/spain.pdf
+- Focus: Korean tourist destinations (Barcelona, Madrid, Toledo, Segovia, Seville, Granada)
+- Created: wiki/sources/spain-lonely-planet.md
+- Created: wiki/entities/barcelona.md
+- Created: wiki/entities/madrid.md
+- Created: wiki/entities/toledo.md
+- Created: wiki/entities/segovia.md
+- Created: wiki/entities/seville.md
+- Created: wiki/entities/granada.md
+- Created: wiki/entities/la-sagrada-familia.md
+- Created: wiki/entities/alhambra.md
+- Created: wiki/synthesis/korea-spain-travel-guide.md
