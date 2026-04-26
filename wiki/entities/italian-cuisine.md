@@ -20,3 +20,4 @@ Related recipes:
 - [[Pasta With Asparagus, Arugula and Ricotta]]
 - [[Pasta With Garlicky Spinach and Buttered Pistachios]]
 - [[Pasta With Spicy Sausage, Broccoli Rabe and Chickpeas]]
+- [[Pasta With Spicy Sausages, Tomatoes, Rosemary and Olives]]

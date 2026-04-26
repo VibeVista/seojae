@@ -195,3 +195,11 @@
 - Created: wiki/entities/lidey-heuck.md
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] ingest | Pasta With Spicy Sausages, Tomatoes, Rosemary and Olives Recipe • 5★ • 30 min
+
+- Source: raw/articles/Pasta With Spicy Sausages, Tomatoes, Rosemary and Olives Recipe • 5★ • 30 min.md
+- Created: wiki/sources/pasta-with-spicy-sausages-tomatoes-rosemary-and-olives.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/melissa-clark.md
+- Updated: wiki/entities/italian-cuisine.md

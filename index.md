@@ -58,6 +58,7 @@
 - [[Pasta With Asparagus, Arugula and Ricotta]] — Recipe for Pasta With Asparagus, Arugula and Ricotta
 - [[Pasta With Garlicky Spinach and Buttered Pistachios]] — Recipe for Pasta With Garlicky Spinach and Buttered Pistachios
 - [[Pasta With Spicy Sausage, Broccoli Rabe and Chickpeas]] — Recipe for Pasta With Spicy Sausage, Broccoli Rabe and Chickpeas
+- [[Pasta With Spicy Sausages, Tomatoes, Rosemary and Olives]] — Recipe for Pasta With Spicy Sausages, Tomatoes, Rosemary and Olives
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
 - [[Vibe Coding — Karpathy]] — Karpathy's original post coining "vibe coding"
 

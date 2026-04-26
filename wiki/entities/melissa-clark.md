@@ -11,3 +11,4 @@ Related recipes:
 - [[Creamy Asparagus Pasta With Peas and Mint]]
 - [[Lemony Pasta With Chickpeas and Parsley]]
 - [[Pasta Primavera With Asparagus and Peas]]
+- [[Pasta With Spicy Sausages, Tomatoes, Rosemary and Olives]]
