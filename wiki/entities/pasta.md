@@ -18,3 +18,4 @@ Related recipes:
 - [[One-Pot Miso-Mascarpone Pasta]]
 - [[Pasta Alla Genovese]]
 - [[Pasta Alla Norma]]
+- [[Pasta Primavera With Asparagus and Peas]]

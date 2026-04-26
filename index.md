@@ -52,6 +52,7 @@
 - [[One-Pot Miso-Mascarpone Pasta]] — Recipe for One-Pot Miso-Mascarpone Pasta
 - [[Pasta Alla Genovese]] — Recipe for Pasta Alla Genovese
 - [[Pasta Alla Norma]] — Recipe for Pasta Alla Norma
+- [[Pasta Primavera With Asparagus and Peas]] — Recipe for Pasta Primavera With Asparagus and Peas
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm
 - [[Vibe Coding — Karpathy]] — Karpathy's original post coining "vibe coding"
 

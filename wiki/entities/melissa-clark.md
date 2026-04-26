@@ -10,3 +10,4 @@ Related recipes:
 - [[Cheesy Baked Pasta With Sausage and Ricotta]]
 - [[Creamy Asparagus Pasta With Peas and Mint]]
 - [[Lemony Pasta With Chickpeas and Parsley]]
+- [[Pasta Primavera With Asparagus and Peas]]

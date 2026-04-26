@@ -16,3 +16,4 @@ Related recipes:
 - [[Lemony Pasta With Chickpeas and Parsley]]
 - [[Pasta Alla Genovese]]
 - [[Pasta Alla Norma]]
+- [[Pasta Primavera With Asparagus and Peas]]

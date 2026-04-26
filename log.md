@@ -163,3 +163,11 @@
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/mark-bittman.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] ingest | Pasta Primavera With Asparagus and Peas Recipe (with Video) • 5★ • 20 min
+
+- Source: raw/articles/Pasta Primavera With Asparagus and Peas Recipe (with Video) • 5★ • 20 min.md
+- Created: wiki/sources/pasta-primavera-with-asparagus-and-peas.md
+- Updated: wiki/entities/pasta.md
+- Updated: wiki/entities/melissa-clark.md
+- Updated: wiki/entities/italian-cuisine.md
