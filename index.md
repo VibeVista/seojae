@@ -13,6 +13,7 @@
 - [[Madrid]] — Spain's capital; world-class museums, Royal Palace, tapas culture
 - [[Melissa Clark]] — Related to recipes
 - [[Pasta]] — Related to recipes
+- [[Sarah Jampel]] — Related to recipes
 - [[Segovia]] — Roman aqueduct, fairy-tale Alcázar castle, cochinillo asado specialty
 - [[Seville]] — Andalucía's capital; flamenco, Real Alcázar, Catedral & Giralda
 - [[Toledo]] — Medieval walled city; UNESCO World Heritage; Catedral, El Greco
@@ -27,6 +28,7 @@
 - [[Blistered Broccoli Pasta With Walnuts, Pecorino and Mint]] — Recipe for Blistered Broccoli Pasta With Walnuts, Pecorino and Mint
 - [[Caramelized Shallot Pasta]] — Recipe for Caramelized Shallot Pasta
 - [[Cheesy Baked Pasta With Sausage and Ricotta]] — Recipe for Cheesy Baked Pasta With Sausage and Ricotta
+- [[Cheesy Baked Pumpkin Pasta With Kale]] — Recipe for Cheesy Baked Pumpkin Pasta With Kale
 - [[Intro to Large Language Models]] — Karpathy's general-audience lecture on what LLMs are and where they're heading
 - [[Lonely Planet Spain (13th Edition)]] — Comprehensive Spain travel guide; this ingest covers six major Korean tourist destinations
 - [[Software 2.0 — Karpathy]] — Karpathy's thesis that neural networks represent a new programming paradigm

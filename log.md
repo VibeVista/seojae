@@ -69,3 +69,11 @@
 - Created: wiki/entities/melissa-clark.md
 - Updated: wiki/entities/pasta.md
 - Updated: wiki/entities/italian-cuisine.md
+
+## [2026-04-26] ingest | Cheesy Baked Pumpkin Pasta With Kale Recipe • 5★ • 45 min
+
+- Source: raw/articles/Cheesy Baked Pumpkin Pasta With Kale Recipe • 5★ • 45 min.md
+- Created: wiki/sources/cheesy-baked-pumpkin-pasta-with-kale.md
+- Created: wiki/entities/sarah-jampel.md
+- Updated: wiki/entities/italian-cuisine.md
+- Updated: wiki/entities/pasta.md
