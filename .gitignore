@@ -1,0 +1,21 @@
+# Obsidian vault (safe default — prevents accidental commit before obsidian.md extension runs)
+.obsidian/
+
+# LLM tool session data
+.claude/
+
+# OS files
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.pytest_cache/
+
+# Semantic search index (regenerated via: venv/bin/python tools/search.py --reindex)
+search-index/
+# Remember logs
+.remember/
+.ouroboros/
+.envrc
