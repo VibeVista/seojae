@@ -334,3 +334,237 @@ def test_cli_query_whitespace_only_exits_1(tmp_path):
 def test_cli_add_missing_file_exits_1(tmp_path):
     result = _run(["--add", "nonexistent.md"], tmp_path / "idx")
     assert result.returncode == 1
+
+
+# --- M1 multi-collection tests ---
+
+def test_get_collection_default_name(tmp_path):
+    from tools.search import get_collection
+    c = get_collection(str(tmp_path / "idx"))
+    assert c.name == "wiki"
+
+
+def test_get_collection_custom_name(tmp_path):
+    from tools.search import get_collection
+    c = get_collection(str(tmp_path / "idx"), name="wiki-ext-spain")
+    assert c.name == "wiki-ext-spain"
+
+
+def test_get_collection_two_collections_same_path(tmp_path):
+    """두 컬렉션이 동일 persistence 디렉토리에서 격리되는지 확인."""
+    from tools.search import get_collection
+    a = get_collection(str(tmp_path / "idx"), name="wiki")
+    b = get_collection(str(tmp_path / "idx"), name="wiki-ext-spain")
+    assert a.name != b.name
+    assert a.count() == 0 and b.count() == 0
+
+
+def test_reindex_custom_collection_name(tmp_path):
+    from tools.search import reindex
+    import chromadb as _ch
+    wiki = tmp_path / "wiki"
+    wiki.mkdir()
+    (wiki / "p.md").write_text("---\ntitle: P\ntags: []\n---\nBody", encoding="utf-8")
+
+    idx = str(tmp_path / "idx")
+    reindex(str(wiki), idx, _mock_model(), name="wiki-ext-foo")
+
+    client = _ch.PersistentClient(path=idx)
+    assert client.get_collection("wiki-ext-foo").count() == 1
+
+
+def test_reindex_excludes_metafiles(tmp_path):
+    """외부 wiki의 메타파일이 wiki/ 안에 섞여 있어도 필터로 제외."""
+    from tools.search import reindex
+    import chromadb as _ch
+    wiki = tmp_path / "ext-wiki"
+    wiki.mkdir()
+    (wiki / "real-page.md").write_text("---\ntitle: Real\ntags: []\n---\nBody", encoding="utf-8")
+    (wiki / "README.md").write_text("---\ntitle: R\ntags: []\n---\nBody", encoding="utf-8")
+    (wiki / "log.md").write_text("---\ntitle: L\ntags: []\n---\nBody", encoding="utf-8")
+    (wiki / "index.md").write_text("---\ntitle: I\ntags: []\n---\nBody", encoding="utf-8")
+    (wiki / "WIKI_SCHEMA.md").write_text("---\ntitle: S\ntags: []\n---\nBody", encoding="utf-8")
+    nested = wiki / "connected-wikis" / "other"
+    nested.mkdir(parents=True)
+    (nested / "leak.md").write_text("---\ntitle: L\ntags: []\n---\nBody", encoding="utf-8")
+
+    idx = str(tmp_path / "idx")
+    reindex(str(wiki), idx, _mock_model(), name="wiki-ext-bar")
+
+    client = _ch.PersistentClient(path=idx)
+    assert client.get_collection("wiki-ext-bar").count() == 1
+
+
+def test_add_page_skips_metafile_inside_wiki(tmp_path, capsys):
+    from tools.search import add_page
+    wiki = tmp_path / "wiki"
+    wiki.mkdir()
+    meta = wiki / "log.md"
+    meta.write_text("---\ntitle: L\ntags: []\n---\nBody", encoding="utf-8")
+
+    collection = _make_collection(tmp_path)
+    model = _mock_model()
+    add_page(str(meta), collection, model, wiki_root=str(wiki))
+
+    assert collection.count() == 0
+    assert "skipping metafile" in capsys.readouterr().err.lower()
+
+
+def test_add_page_skips_outside_wiki_root(tmp_path, capsys):
+    from tools.search import add_page
+    wiki = tmp_path / "wiki"
+    wiki.mkdir()
+    outside = tmp_path / "elsewhere.md"
+    outside.write_text("---\ntitle: O\ntags: []\n---\nBody", encoding="utf-8")
+
+    collection = _make_collection(tmp_path)
+    model = _mock_model()
+    add_page(str(outside), collection, model, wiki_root=str(wiki))
+
+    assert collection.count() == 0
+    assert "skipping metafile" in capsys.readouterr().err.lower()
+
+
+def test_add_page_no_wiki_root_indexes_anyway(tmp_path):
+    """wiki_root 미지정 시 기존 동작 유지 (코어 Ingest 호환)."""
+    from tools.search import add_page
+    page = tmp_path / "p.md"
+    page.write_text("---\ntitle: P\ntags: []\n---\nBody", encoding="utf-8")
+    collection = _make_collection(tmp_path)
+    model = _mock_model()
+    add_page(str(page), collection, model)
+    assert collection.count() == 1
+
+
+def test_query_indexes_merges_by_score(tmp_path):
+    """두 컬렉션 결과를 점수 내림차순으로 머지."""
+    from tools.search import add_page, query_indexes
+    import chromadb as _ch
+
+    idx = str(tmp_path / "idx")
+    client = _ch.PersistentClient(path=idx)
+    c_local = client.get_or_create_collection("wiki", metadata={"hnsw:space": "cosine"})
+    c_ext = client.get_or_create_collection("wiki-ext-foo", metadata={"hnsw:space": "cosine"})
+
+    p1 = tmp_path / "a.md"
+    p1.write_text("---\ntitle: A\ntags: []\n---\nBody", encoding="utf-8")
+    p2 = tmp_path / "b.md"
+    p2.write_text("---\ntitle: B\ntags: []\n---\nBody", encoding="utf-8")
+
+    add_page(str(p1), c_local, _mock_model())
+    add_page(str(p2), c_ext, _mock_model())
+
+    results = query_indexes("anything", top_n=5, collections=[c_local, c_ext], model=_mock_model())
+
+    assert len(results) == 2
+    coll_names = [r[2] for r in results]
+    assert "wiki" in coll_names and "wiki-ext-foo" in coll_names
+    assert results[0][1] >= results[1][1]
+
+
+def test_query_indexes_empty_collections(tmp_path):
+    from tools.search import query_indexes
+    results = query_indexes("q", top_n=5, collections=[], model=_mock_model())
+    assert results == []
+
+
+@_needs_model
+def test_cli_reindex_custom_collection(tmp_path):
+    """--collection wiki-ext-X로 격리된 컬렉션 빌드."""
+    wiki = tmp_path / "wiki"
+    wiki.mkdir()
+    (wiki / "p.md").write_text("---\ntitle: P\ntags: []\n---\nBody", encoding="utf-8")
+
+    idx = tmp_path / "idx"
+    result = _run(["--reindex", "--wiki-path", str(wiki), "--collection", "wiki-ext-foo"], idx)
+    assert result.returncode == 0
+
+    import chromadb as _ch
+    client = _ch.PersistentClient(path=str(idx))
+    assert client.get_collection("wiki-ext-foo").count() == 1
+
+
+@_needs_model
+def test_cli_reindex_isolation_preserves_default(tmp_path):
+    """--reindex --collection wiki-ext-X가 'wiki' 컬렉션을 byte-identical 보존."""
+    wiki = tmp_path / "wiki"
+    wiki.mkdir()
+    (wiki / "local.md").write_text("---\ntitle: L\ntags: []\n---\nLocal body", encoding="utf-8")
+    idx = tmp_path / "idx"
+
+    r1 = _run(["--reindex", "--wiki-path", str(wiki)], idx)
+    assert r1.returncode == 0
+
+    import chromadb as _ch
+    client = _ch.PersistentClient(path=str(idx))
+    before_count = client.get_collection("wiki").count()
+    before_ids = set(client.get_collection("wiki").get()["ids"])
+    del client
+    import gc; gc.collect()
+
+    ext = tmp_path / "ext"; ext.mkdir()
+    (ext / "ext.md").write_text("---\ntitle: E\ntags: []\n---\nExt body", encoding="utf-8")
+    r2 = _run(["--reindex", "--wiki-path", str(ext), "--collection", "wiki-ext-foo"], idx)
+    assert r2.returncode == 0
+
+    client = _ch.PersistentClient(path=str(idx))
+    after_count = client.get_collection("wiki").count()
+    after_ids = set(client.get_collection("wiki").get()["ids"])
+    assert before_count == after_count
+    assert before_ids == after_ids
+
+
+@_needs_model
+def test_cli_query_multi_collections(tmp_path):
+    wiki = tmp_path / "wiki"
+    wiki.mkdir()
+    (wiki / "local.md").write_text("---\ntitle: Vibe\ntags: [ai]\n---\nLocal", encoding="utf-8")
+    ext = tmp_path / "ext"; ext.mkdir()
+    (ext / "spain.md").write_text("---\ntitle: Madrid\ntags: [travel]\n---\nMadrid info", encoding="utf-8")
+
+    idx = tmp_path / "idx"
+    _run(["--reindex", "--wiki-path", str(wiki)], idx)
+    _run(["--reindex", "--wiki-path", str(ext), "--collection", "wiki-ext-spain"], idx)
+
+    result = _run(["--query", "Madrid", "--top", "5",
+                   "--collections", "wiki,wiki-ext-spain"], idx)
+    assert result.returncode == 0
+    assert "[wiki: " in result.stdout
+    assert "wiki-ext-spain" in result.stdout
+
+
+def test_cli_print_model_format(tmp_path):
+    """--print-model은 정확히 두 줄 (backend=, model=) 출력."""
+    result = _run(["--print-model"], tmp_path / "idx")
+    assert result.returncode == 0
+    lines = result.stdout.strip().split("\n")
+    assert len(lines) == 2
+    assert lines[0].startswith("backend=")
+    assert lines[1].startswith("model=")
+    assert "search-chromadb" in lines[0]
+    assert "paraphrase-multilingual-MiniLM-L12-v2" in lines[1]
+
+
+def test_query_index_byte_identical_signature():
+    """query_index 시그니처가 변경되지 않았는지 — byte-identical 호환 보장."""
+    import inspect
+    from tools.search import query_index
+    sig = inspect.signature(query_index)
+    params = list(sig.parameters.keys())
+    assert params == ["q", "top_n", "collection", "model"]
+
+
+@_needs_model
+def test_cli_query_single_collection_format_unchanged(tmp_path):
+    """--collections 미지정 시 출력 포맷이 본 변경 이전과 byte-identical."""
+    wiki = tmp_path / "wiki"
+    wiki.mkdir()
+    (wiki / "p.md").write_text("---\ntitle: Test\ntags: []\n---\nBody", encoding="utf-8")
+    idx = tmp_path / "idx"
+    _run(["--reindex", "--wiki-path", str(wiki)], idx)
+
+    result = _run(["--query", "test", "--top", "1"], idx)
+    assert result.returncode == 0
+    line = result.stdout.strip().split("\n")[0]
+    assert "[wiki:" not in line
+    assert "[score:" in line

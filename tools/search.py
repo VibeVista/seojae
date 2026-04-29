@@ -77,20 +77,47 @@ def build_embedding_text(fm: dict, body: str) -> str:
 
 # --- ChromaDB operations ---
 
-def get_collection(index_path: str = INDEX_PATH) -> chromadb.Collection:
-    """Get or create the ChromaDB collection with cosine similarity metric."""
+def get_collection(index_path: str = INDEX_PATH, name: str = COLLECTION_NAME) -> chromadb.Collection:
+    """Get or create the named ChromaDB collection with cosine similarity metric."""
     client = chromadb.PersistentClient(path=index_path)
     return client.get_or_create_collection(
-        name=COLLECTION_NAME,
+        name=name,
         metadata={"hnsw:space": "cosine"},
     )
 
 
-def add_page(filepath: str, collection: chromadb.Collection, model) -> None:
-    """Add or update a single wiki page in the index (upsert by file path ID)."""
+# 외부 wiki 인덱싱 시 제외할 파일/디렉토리 (B 섹션 인덱싱 범위 규칙)
+_EXCLUDED_FILENAMES = frozenset({
+    "README.md", "log.md", "index.md", "WIKI_SCHEMA.md", "connected-wikis.json",
+})
+
+
+def _should_index(page: Path, wiki_root: Path) -> bool:
+    """True if page is inside wiki_root and not a metafile/nested-connected-wikis path."""
+    try:
+        rel = page.resolve().relative_to(wiki_root.resolve())
+    except ValueError:
+        return False  # outside wiki_root: skip (defensive)
+    parts = rel.parts
+    if "connected-wikis" in parts:
+        return False
+    if page.name in _EXCLUDED_FILENAMES:
+        return False
+    return True
+
+
+def add_page(filepath: str, collection: chromadb.Collection, model, wiki_root: str | None = None) -> None:
+    """Add or update a single wiki page in the index (upsert by file path ID).
+
+    If wiki_root is provided, metafiles and nested connected-wikis paths under it are skipped.
+    """
     path = Path(filepath)
     if not path.exists():
         raise FileNotFoundError(f"{filepath} not found")
+
+    if wiki_root is not None and not _should_index(path, Path(wiki_root)):
+        print(f"Warning: skipping metafile {filepath}", file=sys.stderr)
+        return
 
     text = path.read_text(encoding="utf-8")
     fm, body = parse_frontmatter(text)
@@ -118,23 +145,24 @@ def add_page(filepath: str, collection: chromadb.Collection, model) -> None:
     )
 
 
-def reindex(wiki_path: str, index_path: str, model) -> None:
-    """Rebuild the index from scratch.
+def reindex(wiki_path: str, index_path: str, model, name: str = COLLECTION_NAME) -> None:
+    """Rebuild the named index from scratch.
 
     Deletes and recreates the ChromaDB collection to guarantee a clean slate
     (avoids the collection.get() pagination limits that could leave stale IDs).
     """
     client = chromadb.PersistentClient(path=index_path)
     try:
-        client.delete_collection(COLLECTION_NAME)
+        client.delete_collection(name)
     except Exception:
         pass  # collection didn't exist yet
 
     collection = client.get_or_create_collection(
-        name=COLLECTION_NAME, metadata={"hnsw:space": "cosine"}
+        name=name, metadata={"hnsw:space": "cosine"}
     )
 
-    pages = list(Path(wiki_path).rglob("*.md"))
+    wiki_root = Path(wiki_path)
+    pages = [p for p in wiki_root.rglob("*.md") if _should_index(p, wiki_root)]
     success, skipped = 0, 0
 
     for page in pages:
@@ -199,6 +227,34 @@ def query_index(
     return output  # ChromaDB returns results sorted by distance (best first)
 
 
+def query_indexes(
+    q: str,
+    top_n: int,
+    collections: list[chromadb.Collection],
+    model,
+) -> list[tuple[str, float, str]]:
+    """Multi-collection search. Returns (path, score, collection_name) sorted by score desc.
+
+    Each collection is queried for top_n candidates; results are merged and the global
+    top_n is returned. Score = 1.0 - cosine distance (assumes shared embedding space).
+    """
+    if not collections:
+        return []
+
+    embedding = model.encode(q).tolist()
+    merged: list[tuple[str, float, str]] = []
+    for c in collections:
+        count = c.count()
+        if count == 0:
+            continue
+        res = c.query(query_embeddings=[embedding], n_results=min(top_n, count))
+        for doc_id, distance in zip(res["ids"][0], res["distances"][0]):
+            merged.append((doc_id, 1.0 - distance, c.name))
+
+    merged.sort(key=lambda x: x[1], reverse=True)
+    return merged[:top_n]
+
+
 # --- CLI ---
 
 def main() -> None:
@@ -207,13 +263,24 @@ def main() -> None:
     group.add_argument("--query", metavar="TEXT", help="Search query")
     group.add_argument("--add", metavar="FILE", help="Add or update a wiki page")
     group.add_argument("--reindex", action="store_true", help="Rebuild the full index")
+    group.add_argument("--print-model", action="store_true",
+                       help="Print active backend/model identifiers (two lines)")
     parser.add_argument("--top", type=int, default=5, metavar="N")
     parser.add_argument("--index-path", default=INDEX_PATH, metavar="PATH")
     parser.add_argument("--wiki-path", default=WIKI_PATH, metavar="PATH",
                         help="Wiki directory to scan (used with --reindex)")
+    parser.add_argument("--collection", default=COLLECTION_NAME, metavar="NAME",
+                        help="Collection name for --add/--reindex (default: wiki)")
+    parser.add_argument("--collections", default=None, metavar="LIST",
+                        help="Comma-separated collection names for --query (default: wiki only)")
     args = parser.parse_args()
 
     index_path = args.index_path
+
+    if args.print_model:
+        print("backend=search-chromadb")
+        print(f"model={MODEL_NAME}")
+        return
 
     if args.query is not None:
         if not args.query.strip():
@@ -228,15 +295,24 @@ def main() -> None:
 
         from sentence_transformers import SentenceTransformer
         model = SentenceTransformer(MODEL_NAME)
-        collection = get_collection(index_path)
-        results = query_index(args.query, args.top, collection, model)
-        for path, score in results:
-            print(f"{path} [score: {score:.2f}]")
+
+        if args.collections:
+            names = [n.strip() for n in args.collections.split(",") if n.strip()]
+            cols = [get_collection(index_path, name=n) for n in names]
+            results = query_indexes(args.query, args.top, cols, model)
+            for path, score, coll_name in results:
+                print(f"{path} [wiki: {coll_name}] [score: {score:.2f}]")
+        else:
+            # 단일 컬렉션 — 기존 query_index 그대로 호출 → byte-identical
+            collection = get_collection(index_path)
+            results = query_index(args.query, args.top, collection, model)
+            for path, score in results:
+                print(f"{path} [score: {score:.2f}]")
 
     elif args.add is not None:
         from sentence_transformers import SentenceTransformer
         model = SentenceTransformer(MODEL_NAME)
-        collection = get_collection(index_path)
+        collection = get_collection(index_path, name=args.collection)
         try:
             add_page(args.add, collection, model)
         except FileNotFoundError as e:
@@ -249,7 +325,7 @@ def main() -> None:
             sys.exit(1)
         from sentence_transformers import SentenceTransformer
         model = SentenceTransformer(MODEL_NAME)
-        reindex(args.wiki_path, index_path, model)
+        reindex(args.wiki_path, index_path, model, name=args.collection)
 
 
 if __name__ == "__main__":
