@@ -215,7 +215,11 @@ def request_decision(*, prompt_key: str, question: str, options: list[str],
     if sys.stdin.isatty():
         prompt = f"{question} [{'/'.join(options)}]: "
         while True:
-            ans = input(prompt).strip()
+            try:
+                ans = input(prompt).strip()
+            except EOFError:
+                # PTY wrapper or piped EOF — fall through to PROMPT/exit-4 protocol.
+                break
             if ans in options:
                 return ans
             print(f"Invalid. Choose: {options}")
@@ -751,19 +755,20 @@ def _pull_git(w: dict, today: str, backend: str | None, model: str | None,
         w["embedding_backend"] = backend
         w["embedding_model"] = model
 
-    if old_commit:
-        d = subprocess.run(["git", "diff", "--name-only", old_commit, "HEAD"],
-                           cwd=str(clone_dir), capture_output=True, text=True)
-        if d.returncode == 0:
-            for fname in d.stdout.strip().split("\n"):
-                if not fname or not fname.startswith("wiki/") or not fname.endswith(".md"):
-                    continue
-                _checked_add_page(str(clone_dir / fname), coll, w["id"])
+    # If we already did a full reindex above, skip the diff/full-reindex pass below.
+    if mismatch_decision != "reindex":
+        if old_commit:
+            d = subprocess.run(["git", "diff", "--name-only", old_commit, "HEAD"],
+                               cwd=str(clone_dir), capture_output=True, text=True)
+            if d.returncode == 0:
+                for fname in d.stdout.strip().split("\n"):
+                    if not fname or not fname.startswith("wiki/") or not fname.endswith(".md"):
+                        continue
+                    _checked_add_page(str(clone_dir / fname), coll, w["id"])
+            else:
+                _checked_reindex(str(clone_dir / "wiki"), coll, w["id"])
         else:
             _checked_reindex(str(clone_dir / "wiki"), coll, w["id"])
-    elif mismatch_decision != "reindex":
-        # No old_commit and no mismatch reindex — do a full reindex
-        _checked_reindex(str(clone_dir / "wiki"), coll, w["id"])
 
     w["last_pulled"] = today
     w["commit"] = new_commit
