@@ -911,3 +911,178 @@ def test_connect_aborts_when_print_model_fails(tmp_path, monkeypatch):
                         source_type="local", decisions={"consent": "accept"})
     assert rc == 1
     assert cw.load_config(cw.CONFIG_PATH)["wikis"] == []
+
+
+# --- Review fixes ---
+
+def test_connect_accepts_wiki_with_pages_only_in_subdirs(tmp_path, monkeypatch):
+    """Canonical seojae layout: pages live under wiki/concepts/, wiki/entities/, etc."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    ext = tmp_path / "subdir-wiki"
+    (ext / "wiki" / "concepts").mkdir(parents=True)
+    (ext / "wiki" / "concepts" / "thing.md").write_text(
+        "---\ntitle: T\ntags: []\n---\nbody", encoding="utf-8")
+    # No top-level wiki/*.md — only wiki/concepts/*.md
+
+    _stub_resolve_model(cw, monkeypatch, model="m")
+    monkeypatch.setattr(cw, "_run_reindex", _make_fake_reindex_factory(cw))
+
+    rc = cw.cmd_connect(source=str(ext), wiki_id="sub", name=None,
+                        source_type="local", decisions={"consent": "accept"})
+    assert rc == 0
+    assert cw.load_config(cw.CONFIG_PATH)["wikis"][0]["status"] == "ok"
+
+
+def test_connect_resumes_after_decision_pending(tmp_path, monkeypatch):
+    """First call (no decision) leaves status=connecting and exits 4.
+    Second call with --decision must complete rather than collide on id."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    ext = tmp_path / "src"; (ext / "wiki").mkdir(parents=True)
+    (ext / "wiki" / "p.md").write_text("---\ntitle: P\ntags: []\n---\n", encoding="utf-8")
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+
+    # Call 1: no decision → exits 4 with reservation persisted
+    with pytest.raises(SystemExit) as exc:
+        cw.cmd_connect(source=str(ext), wiki_id="resume", name=None,
+                       source_type="local", decisions={})
+    assert exc.value.code == 4
+    cfg = cw.load_config(cw.CONFIG_PATH)
+    assert len(cfg["wikis"]) == 1
+    assert cfg["wikis"][0]["id"] == "resume"
+    assert cfg["wikis"][0]["status"] == "connecting"
+
+    # Call 2: decision provided → resumes, completes
+    _stub_resolve_model(cw, monkeypatch, model="m")
+    monkeypatch.setattr(cw, "_run_reindex", _make_fake_reindex_factory(cw))
+    rc = cw.cmd_connect(source=str(ext), wiki_id="resume", name=None,
+                        source_type="local", decisions={"consent": "accept"})
+    assert rc == 0
+    cfg = cw.load_config(cw.CONFIG_PATH)
+    assert len(cfg["wikis"]) == 1
+    assert cfg["wikis"][0]["status"] == "ok"
+
+
+def test_connect_rejects_resume_with_different_source(tmp_path, monkeypatch):
+    """A status=connecting entry should not resume if the user supplies a different source."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    save_config(cw.CONFIG_PATH, {"schema_version": 1, "wikis": [
+        {"id": "x", "name": "X", "source_type": "local", "source": "/orig",
+         "enabled": True, "status": "connecting", "added": "2026-04-29",
+         "embedding_backend": None, "embedding_model": None}
+    ]})
+    rc = cw.cmd_connect(source="/different", wiki_id="x", name=None,
+                        source_type="local", decisions={"consent": "accept"})
+    assert rc == 1
+
+
+def test_connect_rejects_overwriting_ok_entry(tmp_path, monkeypatch):
+    """Resume only applies to status=connecting; a status=ok entry blocks reconnection."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    save_config(cw.CONFIG_PATH, {"schema_version": 1, "wikis": [
+        {"id": "x", "name": "X", "source_type": "local", "source": "/x",
+         "enabled": True, "status": "ok", "added": "2026-04-29",
+         "embedding_backend": "search-chromadb", "embedding_model": "m"}
+    ]})
+    rc = cw.cmd_connect(source="/x", wiki_id="x", name=None,
+                        source_type="local", decisions={"consent": "accept"})
+    assert rc == 1
+
+
+def test_pull_mismatch_decision_resolved_before_reset(tmp_path, monkeypatch):
+    """When DecisionPending fires for mismatch, clone state must be untouched
+    so the next invocation sees a consistent old_commit/HEAD pair."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    remote = _make_fake_remote(tmp_path)
+    save_config(cw.CONFIG_PATH, {"schema_version": 1, "wikis": [
+        {"id": "g", "name": "G", "source_type": "git", "source": str(remote),
+         "enabled": True, "status": "ok", "added": "2026-04-29",
+         "embedding_backend": "search-chromadb", "embedding_model": "OLD-MODEL",
+         "last_pulled": "2026-04-29", "commit": "abc1234"}
+    ]})
+    subprocess.run(["git", "clone", str(remote), str(tmp_path / "connected-wikis" / "g")],
+                   check=True, capture_output=True)
+    head_before = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=str(tmp_path / "connected-wikis" / "g"),
+        capture_output=True, text=True,
+    ).stdout.strip()
+
+    # Advance remote so a fetch+reset would change HEAD
+    (remote / "wiki" / "new.md").write_text(
+        "---\ntitle: N\ntags: []\n---\nfresh", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=remote, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "advance"], cwd=remote, check=True, capture_output=True)
+
+    _stub_resolve_model(cw, monkeypatch, model="NEW-MODEL")
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False)
+
+    with pytest.raises(SystemExit) as exc:
+        cw.cmd_pull(decisions={})
+    assert exc.value.code == 4
+
+    # Local clone must NOT have been advanced — fix verifies mismatch resolves first
+    head_after = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=str(tmp_path / "connected-wikis" / "g"),
+        capture_output=True, text=True,
+    ).stdout.strip()
+    assert head_after == head_before
+
+
+def test_pull_subprocess_failure_is_logged(tmp_path, monkeypatch, capsys):
+    """A failed _run_add_page must surface a stderr warning, not silently swallow."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    src = tmp_path / "loc"; (src / "wiki").mkdir(parents=True)
+    (src / "wiki" / "old.md").write_text("---\ntitle: O\ntags: []\n---\nold", encoding="utf-8")
+    save_config(cw.CONFIG_PATH, {"schema_version": 1, "wikis": [
+        {"id": "loc", "name": "L", "source_type": "local", "source": str(src),
+         "enabled": True, "status": "ok", "added": "2026-04-29",
+         "embedding_backend": "search-chromadb", "embedding_model": "m",
+         "last_pulled": "2026-01-01"}
+    ]})
+
+    def _failing_add(f, c):
+        class R:
+            returncode = 1
+            stdout = ""
+            stderr = "boom"
+
+        return R()
+    monkeypatch.setattr(cw, "_run_add_page", _failing_add)
+
+    rc = cw.cmd_pull(decisions={})
+    assert rc == 0
+    err = capsys.readouterr().err
+    assert "add_page failed" in err
+    assert "loc:" in err
+    assert "boom" in err
+
+
+def test_init_commits_on_first_bootstrap(tmp_path, monkeypatch):
+    """Init must run _git_commit('extension: enable connected-wikis') on first setup."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    commits: list[str] = []
+    monkeypatch.setattr(cw, "_git_commit", lambda msg: commits.append(msg))
+
+    rc = cw.cmd_init()
+    assert rc == 0
+    assert "extension: enable connected-wikis" in commits
+
+
+def test_init_idempotent_no_extra_commit(tmp_path, monkeypatch):
+    """Subsequent init calls must not re-commit."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    (tmp_path / ".gitignore").write_text("connected-wikis/\nconnected-wikis.lock\n", encoding="utf-8")
+    save_config(cw.CONFIG_PATH, {"schema_version": 1, "wikis": []})
+
+    commits: list[str] = []
+    monkeypatch.setattr(cw, "_git_commit", lambda msg: commits.append(msg))
+    rc = cw.cmd_init()
+    assert rc == 0
+    assert commits == []

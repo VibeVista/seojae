@@ -332,16 +332,18 @@ def _grep_references(wiki_id: str) -> list[tuple[str, int, str]]:
 # --- Subcommands ---
 
 def cmd_init() -> int:
-    """Lazy bootstrap. Idempotent."""
+    """Lazy bootstrap. Idempotent. Commits extension activation on first setup."""
     wiki_dir = _REPO_ROOT / "wiki"
     if not wiki_dir.exists():
         print("Error: wiki/ directory not found. Run project init first.", file=sys.stderr)
         return 1
 
+    bootstrapped = False
     if not CONFIG_PATH.exists():
         with with_global_lock(GLOBAL_LOCK):
             if not CONFIG_PATH.exists():
                 save_config(CONFIG_PATH, dict(DEFAULT_CONFIG, wikis=[]))
+                bootstrapped = True
 
     gi_path = _REPO_ROOT / ".gitignore"
     needed = ["connected-wikis/", "connected-wikis.lock"]
@@ -354,6 +356,10 @@ def cmd_init() -> int:
         with gi_path.open("a", encoding="utf-8") as f:
             for n in missing:
                 f.write(f"{n}\n")
+        bootstrapped = True
+
+    if bootstrapped:
+        _git_commit("extension: enable connected-wikis")
 
     print("connected-wikis initialized")
     return 0
@@ -456,36 +462,52 @@ def cmd_connect(source: str, wiki_id: str, name: str | None,
     coll_name = f"wiki-ext-{wiki_id}"
     clone_dir = CONNECTED_DIR / wiki_id
 
+    # Resume-on-re-invocation: a prior call that exited via DecisionPending
+    # leaves a status="connecting" entry. Same source → resume rather than fail.
     cfg = load_config(CONFIG_PATH)
-    try:
-        validate_id(wiki_id, cfg["wikis"])
-    except IdError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 1
-
-    with with_global_lock(GLOBAL_LOCK):
-        cfg = load_config(CONFIG_PATH)
-        if any(w["id"] == wiki_id for w in cfg["wikis"]):
-            print(f"Error: id '{wiki_id}' already reserved", file=sys.stderr)
+    existing = next((w for w in cfg["wikis"] if w["id"] == wiki_id), None)
+    if existing is not None:
+        if existing.get("status") == "connecting" and existing.get("source") == source:
+            today = existing.get("added", today)
+            name = existing.get("name", name)
+        else:
+            print(f"Error: id '{wiki_id}' already exists (status={existing.get('status')})",
+                  file=sys.stderr)
             return 1
-        cfg["wikis"].append({
-            "id": wiki_id, "name": name, "source_type": source_type, "source": source,
-            "enabled": True, "status": "connecting", "added": today,
-            "embedding_backend": None, "embedding_model": None,
-        })
-        save_config(CONFIG_PATH, cfg)
+    else:
+        try:
+            validate_id(wiki_id, cfg["wikis"])
+        except IdError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+
+        with with_global_lock(GLOBAL_LOCK):
+            cfg = load_config(CONFIG_PATH)
+            if any(w["id"] == wiki_id for w in cfg["wikis"]):
+                print(f"Error: id '{wiki_id}' already reserved", file=sys.stderr)
+                return 1
+            cfg["wikis"].append({
+                "id": wiki_id, "name": name, "source_type": source_type, "source": source,
+                "enabled": True, "status": "connecting", "added": today,
+                "embedding_backend": None, "embedding_model": None,
+            })
+            save_config(CONFIG_PATH, cfg)
 
     lock_fd = acquire_per_wiki_lock(LOCK_DIR, wiki_id, blocking=True)
     try:
         if source_type == "git":
-            clone_dir.parent.mkdir(parents=True, exist_ok=True)
-            r = subprocess.run(["git", "clone", source, str(clone_dir)],
-                               capture_output=True, text=True)
-            if r.returncode != 0:
-                _rollback_connect(wiki_id, coll_name, clone_dir, source_type)
-                print(f"Error: git clone failed: {r.stderr}", file=sys.stderr)
-                return 1
-            wiki_subdir = clone_dir / "wiki"
+            if clone_dir.exists():
+                # resume: prior call already cloned
+                wiki_subdir = clone_dir / "wiki"
+            else:
+                clone_dir.parent.mkdir(parents=True, exist_ok=True)
+                r = subprocess.run(["git", "clone", source, str(clone_dir)],
+                                   capture_output=True, text=True)
+                if r.returncode != 0:
+                    _rollback_connect(wiki_id, coll_name, clone_dir, source_type)
+                    print(f"Error: git clone failed: {r.stderr}", file=sys.stderr)
+                    return 1
+                wiki_subdir = clone_dir / "wiki"
         else:
             if not Path(source).exists():
                 _rollback_connect(wiki_id, coll_name, clone_dir, source_type)
@@ -493,9 +515,9 @@ def cmd_connect(source: str, wiki_id: str, name: str | None,
                 return 1
             wiki_subdir = Path(source) / "wiki"
 
-        if not wiki_subdir.exists() or not any(wiki_subdir.glob("*.md")):
+        if not wiki_subdir.exists() or not any(wiki_subdir.rglob("*.md")):
             _rollback_connect(wiki_id, coll_name, clone_dir, source_type)
-            print(f"Error: source has no wiki/*.md: {wiki_subdir}", file=sys.stderr)
+            print(f"Error: source has no wiki/**/*.md: {wiki_subdir}", file=sys.stderr)
             return 1
 
         readme_root = clone_dir if source_type == "git" else Path(source)
@@ -587,11 +609,21 @@ def cmd_disconnect(wiki_id: str, decisions: dict[str, str]) -> int:
             cfg["wikis"] = [w for w in cfg["wikis"] if w["id"] != wiki_id]
             save_config(CONFIG_PATH, cfg)
 
-        _delete_collection(f"wiki-ext-{wiki_id}")
+        # JSON entry already removed — best-effort cleanup of remaining artifacts.
+        # Failures here would orphan files but the user has no JSON handle to retry,
+        # so log loudly and proceed.
+        try:
+            _delete_collection(f"wiki-ext-{wiki_id}")
+        except Exception as e:
+            print(f"Warning: could not delete collection 'wiki-ext-{wiki_id}': {e}",
+                  file=sys.stderr)
 
         clone_dir = CONNECTED_DIR / wiki_id
         if clone_dir.exists():
-            shutil.rmtree(clone_dir)
+            try:
+                shutil.rmtree(clone_dir)
+            except Exception as e:
+                print(f"Warning: could not remove {clone_dir}: {e}", file=sys.stderr)
 
         _append_log(f"disconnect | {wiki_id}")
         _git_commit(f"disconnect: {wiki_id}")
@@ -605,9 +637,29 @@ def cmd_disconnect(wiki_id: str, decisions: dict[str, str]) -> int:
             pass
 
 
+def _checked_add_page(filepath: str, collection: str, wiki_id: str) -> None:
+    """Run _run_add_page and log non-zero exit to stderr (best-effort)."""
+    r = _run_add_page(filepath, collection)
+    if r.returncode != 0:
+        print(f"Warning: add_page failed for {wiki_id}:{filepath}: {r.stderr.strip()}",
+              file=sys.stderr)
+
+
+def _checked_reindex(wiki_path: str, collection: str, wiki_id: str) -> None:
+    """Run _run_reindex and log non-zero exit to stderr (best-effort)."""
+    r = _run_reindex(wiki_path, collection)
+    if r.returncode != 0:
+        print(f"Warning: reindex failed for {wiki_id}: {r.stderr.strip()}",
+              file=sys.stderr)
+
+
 def _pull_git(w: dict, today: str, backend: str | None, model: str | None,
               decisions: dict[str, str]) -> bool:
-    """Mutates w in place. Raises _PullUnreachable on access failure."""
+    """Mutates w in place. Raises _PullUnreachable on access failure.
+
+    Embedding-model mismatch is resolved BEFORE any clone-state mutation, so
+    DecisionPending leaves disk and JSON consistent for resume.
+    """
     clone_dir = CONNECTED_DIR / w["id"]
     if not clone_dir.exists():
         clone_dir.parent.mkdir(parents=True, exist_ok=True)
@@ -615,6 +667,18 @@ def _pull_git(w: dict, today: str, backend: str | None, model: str | None,
                            capture_output=True, text=True)
         if r.returncode != 0:
             raise _PullUnreachable(r.stderr)
+
+    # Resolve mismatch decision FIRST — must not mutate clone state before this,
+    # because DecisionPending exits with the disk untouched and JSON re-readable.
+    mismatch_decision: str | None = None
+    if backend and model and (w.get("embedding_backend") != backend
+                              or w.get("embedding_model") != model):
+        mismatch_decision = request_decision(
+            prompt_key="mismatch",
+            question=f"'{w['id']}' embedding model differs (was {w.get('embedding_model')}, now {model}). Update field only or reindex?",
+            options=["update", "reindex"],
+            decisions=decisions,
+        )
 
     branch = _detect_default_branch(clone_dir)
 
@@ -628,16 +692,11 @@ def _pull_git(w: dict, today: str, backend: str | None, model: str | None,
                    cwd=str(clone_dir), capture_output=True, check=False)
     new_commit = _git_head_sha(clone_dir)
 
-    if backend and model and (w.get("embedding_backend") != backend
-                              or w.get("embedding_model") != model):
-        decision = request_decision(
-            prompt_key="mismatch",
-            question=f"'{w['id']}' embedding model differs (was {w.get('embedding_model')}, now {model}). Update field only or reindex?",
-            options=["update", "reindex"],
-            decisions=decisions,
-        )
-        if decision == "reindex":
-            _run_reindex(str(clone_dir / "wiki"), f"wiki-ext-{w['id']}")
+    coll = f"wiki-ext-{w['id']}"
+
+    if mismatch_decision == "reindex":
+        _checked_reindex(str(clone_dir / "wiki"), coll, w["id"])
+    if mismatch_decision is not None:
         w["embedding_backend"] = backend
         w["embedding_model"] = model
 
@@ -648,11 +707,12 @@ def _pull_git(w: dict, today: str, backend: str | None, model: str | None,
             for fname in d.stdout.strip().split("\n"):
                 if not fname or not fname.startswith("wiki/") or not fname.endswith(".md"):
                     continue
-                _run_add_page(str(clone_dir / fname), f"wiki-ext-{w['id']}")
+                _checked_add_page(str(clone_dir / fname), coll, w["id"])
         else:
-            _run_reindex(str(clone_dir / "wiki"), f"wiki-ext-{w['id']}")
-    else:
-        _run_reindex(str(clone_dir / "wiki"), f"wiki-ext-{w['id']}")
+            _checked_reindex(str(clone_dir / "wiki"), coll, w["id"])
+    elif mismatch_decision != "reindex":
+        # No old_commit and no mismatch reindex — do a full reindex
+        _checked_reindex(str(clone_dir / "wiki"), coll, w["id"])
 
     w["last_pulled"] = today
     w["commit"] = new_commit
@@ -667,15 +727,18 @@ def _pull_local(w: dict, today: str, backend: str | None, model: str | None) -> 
         raise _PullUnreachable(f"local path missing: {src}")
 
     last_pulled = w.get("last_pulled", "1970-01-01")
+    # Note: last_pulled is date-only (YYYY-MM-DD); midnight-local granularity is
+    # acceptable per spec — same-day double pull may skip files modified mid-day.
     threshold = datetime.fromisoformat(last_pulled).timestamp()
 
     wiki_subdir = src / "wiki"
     if not wiki_subdir.exists():
         raise _PullUnreachable(f"no wiki/ in {src}")
 
+    coll = f"wiki-ext-{w['id']}"
     for md in wiki_subdir.rglob("*.md"):
         if md.stat().st_mtime > threshold:
-            _run_add_page(str(md), f"wiki-ext-{w['id']}")
+            _checked_add_page(str(md), coll, w["id"])
 
     if backend and model:
         w["embedding_backend"] = backend
