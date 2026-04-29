@@ -31,3 +31,5 @@
 ## [2026-04-29] toggle | sample on
 
 ## [2026-04-29] disconnect | sample
+
+## [2026-04-29] connect | eng

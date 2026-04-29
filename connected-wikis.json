@@ -1,4 +1,17 @@
 {
   "schema_version": 1,
-  "wikis": []
+  "wikis": [
+    {
+      "id": "eng",
+      "name": "eng-wiki",
+      "source_type": "local",
+      "source": "/tmp/eng-wiki",
+      "enabled": true,
+      "status": "ok",
+      "added": "2026-04-29",
+      "embedding_backend": "search-chromadb",
+      "embedding_model": "paraphrase-multilingual-MiniLM-L12-v2",
+      "last_pulled": "2026-04-29"
+    }
+  ]
 }
