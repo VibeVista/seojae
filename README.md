@@ -157,6 +157,7 @@ LLM instructions that are loaded alongside the core schema.
 - `search-chromadb.md` — Semantic search backend (ChromaDB + sentence-transformers)
 - `obsidian.md` — Obsidian vault integration
 - `connected-wikis.md` — Toggle external seojae wikis as extended knowledge sources
+  ([사용 가이드](docs/connected-wikis-guide.ko.md))
 
 See [extensions/README.md](extensions/README.md) for details on creating your own.
 
