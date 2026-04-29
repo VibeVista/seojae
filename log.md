@@ -29,3 +29,5 @@
 ## [2026-04-29] toggle | sample off
 
 ## [2026-04-29] toggle | sample on
+
+## [2026-04-29] disconnect | sample
