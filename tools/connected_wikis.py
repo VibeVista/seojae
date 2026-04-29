@@ -52,22 +52,47 @@ class _PullUnreachable(Exception):
 
 # --- Config I/O ---
 
+class ConfigCorrupt(RuntimeError):
+    """Raised when connected-wikis.json is unreadable or structurally invalid."""
+
+
 def load_config(path: Path) -> dict:
     """Read connected-wikis.json. Returns DEFAULT_CONFIG if missing.
 
     Performs in-memory field backfill (status, embedding_*) but does NOT write back —
     the next save_config() call persists backfilled values.
+
+    Raises ConfigCorrupt with a recovery hint if the file exists but is invalid JSON
+    or has the wrong shape.
     """
     if not path.exists():
         return dict(DEFAULT_CONFIG, wikis=[])
 
-    with path.open("r", encoding="utf-8") as f:
-        cfg = json.load(f)
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            cfg = json.load(f)
+    except json.JSONDecodeError as e:
+        raise ConfigCorrupt(
+            f"{path} is not valid JSON: {e}. "
+            f"Restore from git history or delete to reset."
+        ) from e
+
+    if not isinstance(cfg, dict):
+        raise ConfigCorrupt(
+            f"{path} top-level value is {type(cfg).__name__}, expected object. "
+            f"Restore from git history or delete to reset."
+        )
 
     cfg.setdefault("schema_version", CONFIG_VERSION)
     cfg.setdefault("wikis", [])
+    if not isinstance(cfg["wikis"], list):
+        raise ConfigCorrupt(
+            f"{path} 'wikis' field is {type(cfg['wikis']).__name__}, expected list."
+        )
+
     for w in cfg["wikis"]:
-        _backfill_wiki(w)
+        if isinstance(w, dict):
+            _backfill_wiki(w)
     return cfg
 
 
@@ -235,21 +260,34 @@ def _run_add_page(filepath: str, collection: str):
 
 def _delete_collection(name: str) -> None:
     import chromadb
+    import gc
+    client = None
     try:
         client = chromadb.PersistentClient(path=INDEX_PATH)
         client.delete_collection(name)
     except Exception:
         pass
+    finally:
+        # Drop the client reference so SQLite handles get freed promptly,
+        # avoiding lock contention with subsequent ChromaDB operations
+        # (same pattern the test suite uses defensively).
+        del client
+        gc.collect()
 
 
 def _collection_count(index_path: str, collection_name: str) -> int | None:
     """Return collection count or None if missing."""
     import chromadb
+    import gc
+    client = None
     try:
         client = chromadb.PersistentClient(path=index_path)
         return client.get_collection(collection_name).count()
     except Exception:
         return None
+    finally:
+        del client
+        gc.collect()
 
 
 def _detect_default_branch(repo_dir: Path) -> str:
@@ -463,13 +501,24 @@ def cmd_connect(source: str, wiki_id: str, name: str | None,
     clone_dir = CONNECTED_DIR / wiki_id
 
     # Resume-on-re-invocation: a prior call that exited via DecisionPending
-    # leaves a status="connecting" entry. Same source → resume rather than fail.
+    # leaves a status="connecting" entry. Same source AND source_type → resume.
     cfg = load_config(CONFIG_PATH)
     existing = next((w for w in cfg["wikis"] if w["id"] == wiki_id), None)
+    added_date = today
     if existing is not None:
-        if existing.get("status") == "connecting" and existing.get("source") == source:
-            today = existing.get("added", today)
+        if (existing.get("status") == "connecting"
+                and existing.get("source") == source
+                and existing.get("source_type") == source_type):
+            added_date = existing.get("added", today)
             name = existing.get("name", name)
+        elif existing.get("status") == "connecting":
+            print(
+                f"Error: id '{wiki_id}' is mid-connect with different "
+                f"source/source_type (reserved as {existing.get('source_type')}:{existing.get('source')!r}); "
+                "either retry with the original args or run disconnect to clear.",
+                file=sys.stderr,
+            )
+            return 1
         else:
             print(f"Error: id '{wiki_id}' already exists (status={existing.get('status')})",
                   file=sys.stderr)
@@ -488,7 +537,7 @@ def cmd_connect(source: str, wiki_id: str, name: str | None,
                 return 1
             cfg["wikis"].append({
                 "id": wiki_id, "name": name, "source_type": source_type, "source": source,
-                "enabled": True, "status": "connecting", "added": today,
+                "enabled": True, "status": "connecting", "added": added_date,
                 "embedding_backend": None, "embedding_model": None,
             })
             save_config(CONFIG_PATH, cfg)
@@ -501,7 +550,9 @@ def cmd_connect(source: str, wiki_id: str, name: str | None,
                 wiki_subdir = clone_dir / "wiki"
             else:
                 clone_dir.parent.mkdir(parents=True, exist_ok=True)
-                r = subprocess.run(["git", "clone", source, str(clone_dir)],
+                # `--` prevents `source` strings starting with `--` from being
+                # parsed as git options (e.g., --upload-pack=evil-cmd).
+                r = subprocess.run(["git", "clone", "--", source, str(clone_dir)],
                                    capture_output=True, text=True)
                 if r.returncode != 0:
                     _rollback_connect(wiki_id, coll_name, clone_dir, source_type)
@@ -663,7 +714,7 @@ def _pull_git(w: dict, today: str, backend: str | None, model: str | None,
     clone_dir = CONNECTED_DIR / w["id"]
     if not clone_dir.exists():
         clone_dir.parent.mkdir(parents=True, exist_ok=True)
-        r = subprocess.run(["git", "clone", w["source"], str(clone_dir)],
+        r = subprocess.run(["git", "clone", "--", w["source"], str(clone_dir)],
                            capture_output=True, text=True)
         if r.returncode != 0:
             raise _PullUnreachable(r.stderr)
@@ -749,6 +800,11 @@ def _pull_local(w: dict, today: str, backend: str | None, model: str | None) -> 
     return True
 
 
+_PULL_MUTABLE_FIELDS = (
+    "status", "last_pulled", "commit", "embedding_backend", "embedding_model",
+)
+
+
 def cmd_pull(decisions: dict[str, str]) -> int:
     cmd_init()
 
@@ -760,6 +816,11 @@ def cmd_pull(decisions: dict[str, str]) -> int:
     became_unreachable = 0
 
     backend, model = _resolve_active_model_or_none()
+
+    # Track per-wiki updates separately so we can merge them on top of a fresh
+    # config snapshot at the end — protects against concurrent toggle/connect
+    # writes that happened during the (potentially long) per-wiki git fetches.
+    updates: dict[str, dict] = {}
 
     for w in cfg["wikis"]:
         wid = w["id"]
@@ -778,12 +839,19 @@ def cmd_pull(decisions: dict[str, str]) -> int:
                     w["status"] = "unreachable"
                     meta_changed = True
                     became_unreachable += 1
+            updates[wid] = {k: w[k] for k in _PULL_MUTABLE_FIELDS if k in w}
         finally:
             release_per_wiki_lock(lock_fd)
 
     if meta_changed:
         with with_global_lock(GLOBAL_LOCK):
-            save_config(CONFIG_PATH, cfg)
+            # Re-read under the lock and merge the per-wiki updates so we don't
+            # clobber concurrent toggle/connect writes that happened mid-loop.
+            current = load_config(CONFIG_PATH)
+            for w in current["wikis"]:
+                if w["id"] in updates:
+                    w.update(updates[w["id"]])
+            save_config(CONFIG_PATH, current)
         if success_n > 0:
             msg = f"pull: {success_n} wikis updated"
         else:

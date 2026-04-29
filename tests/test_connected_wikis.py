@@ -1086,3 +1086,115 @@ def test_init_idempotent_no_extra_commit(tmp_path, monkeypatch):
     rc = cw.cmd_init()
     assert rc == 0
     assert commits == []
+
+
+# --- Review fixes (iteration 2) ---
+
+def test_load_config_corrupt_json_raises_clear_error(tmp_path):
+    from tools.connected_wikis import load_config, ConfigCorrupt
+    p = tmp_path / "cfg.json"
+    p.write_text("not json {{{", encoding="utf-8")
+    with pytest.raises(ConfigCorrupt) as exc:
+        load_config(p)
+    assert "not valid JSON" in str(exc.value)
+
+
+def test_load_config_non_dict_raises_clear_error(tmp_path):
+    from tools.connected_wikis import load_config, ConfigCorrupt
+    p = tmp_path / "cfg.json"
+    p.write_text("[1, 2, 3]", encoding="utf-8")
+    with pytest.raises(ConfigCorrupt):
+        load_config(p)
+
+
+def test_load_config_wikis_not_list_raises(tmp_path):
+    from tools.connected_wikis import load_config, ConfigCorrupt
+    p = tmp_path / "cfg.json"
+    p.write_text(json.dumps({"schema_version": 1, "wikis": {}}), encoding="utf-8")
+    with pytest.raises(ConfigCorrupt):
+        load_config(p)
+
+
+def test_connect_resume_rejects_source_type_mismatch(tmp_path, monkeypatch, capsys):
+    """status=connecting + same id but different source_type → reject, not silently retry."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    save_config(cw.CONFIG_PATH, {"schema_version": 1, "wikis": [
+        {"id": "x", "name": "X", "source_type": "local", "source": "/orig",
+         "enabled": True, "status": "connecting", "added": "2026-04-29",
+         "embedding_backend": None, "embedding_model": None}
+    ]})
+    rc = cw.cmd_connect(source="/orig", wiki_id="x", name=None,
+                        source_type="git", decisions={"consent": "accept"})
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "mid-connect" in err.lower() or "different" in err.lower()
+
+
+def test_connect_resume_uses_today_for_last_pulled_not_added_date(tmp_path, monkeypatch):
+    """Resumed connect should keep original `added` date but write today's date as last_pulled."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    src = tmp_path / "src"; (src / "wiki").mkdir(parents=True)
+    (src / "wiki" / "p.md").write_text("---\ntitle: P\ntags: []\n---\n", encoding="utf-8")
+    save_config(cw.CONFIG_PATH, {"schema_version": 1, "wikis": [
+        {"id": "r", "name": "R", "source_type": "local", "source": str(src),
+         "enabled": True, "status": "connecting", "added": "2024-01-01",
+         "embedding_backend": None, "embedding_model": None}
+    ]})
+
+    _stub_resolve_model(cw, monkeypatch, model="m")
+    monkeypatch.setattr(cw, "_run_reindex", _make_fake_reindex_factory(cw))
+
+    rc = cw.cmd_connect(source=str(src), wiki_id="r", name=None,
+                        source_type="local", decisions={"consent": "accept"})
+    assert rc == 0
+    w = cw.load_config(cw.CONFIG_PATH)["wikis"][0]
+    from datetime import date as _date
+    assert w["added"] == "2024-01-01"  # preserved
+    assert w["last_pulled"] == _date.today().isoformat()  # today, not 2024-01-01
+
+
+def test_pull_does_not_clobber_concurrent_toggle(tmp_path, monkeypatch):
+    """Concurrent toggle during cmd_pull must survive — pull merges instead of overwriting."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    src1 = tmp_path / "s1"; (src1 / "wiki").mkdir(parents=True)
+    src2 = tmp_path / "s2"; (src2 / "wiki").mkdir(parents=True)
+    save_config(cw.CONFIG_PATH, {"schema_version": 1, "wikis": [
+        {"id": "a", "name": "A", "source_type": "local", "source": str(src1),
+         "enabled": True, "status": "ok", "added": "2026-04-29",
+         "embedding_backend": "search-chromadb", "embedding_model": "m",
+         "last_pulled": "2026-04-29"},
+        {"id": "b", "name": "B", "source_type": "local", "source": str(src2),
+         "enabled": True, "status": "ok", "added": "2026-04-29",
+         "embedding_backend": "search-chromadb", "embedding_model": "m",
+         "last_pulled": "2026-04-29"},
+    ]})
+
+    monkeypatch.setattr(cw, "_run_add_page",
+                        lambda f, c: type("R", (), {"returncode": 0, "stdout":"", "stderr":""})())
+
+    # Hook _pull_local to flip "b" off in the JSON mid-loop, simulating a concurrent toggle.
+    orig_pull_local = cw._pull_local
+
+    def _toggle_b_then_pull(w, today, backend, model):
+        result = orig_pull_local(w, today, backend, model)
+        if w["id"] == "a":
+            cfg = cw.load_config(cw.CONFIG_PATH)
+            for x in cfg["wikis"]:
+                if x["id"] == "b":
+                    x["enabled"] = False
+            save_config(cw.CONFIG_PATH, cfg)
+        return result
+    monkeypatch.setattr(cw, "_pull_local", _toggle_b_then_pull)
+
+    rc = cw.cmd_pull(decisions={})
+    assert rc == 0
+    cfg = cw.load_config(cw.CONFIG_PATH)
+    by_id = {w["id"]: w for w in cfg["wikis"]}
+    # The concurrent toggle of b must have survived
+    assert by_id["b"]["enabled"] is False
+    # Pull's own mutations should also be present on both
+    assert by_id["a"]["status"] == "ok"
+    assert by_id["b"]["status"] == "ok"
