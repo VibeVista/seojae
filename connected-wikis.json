@@ -6,7 +6,7 @@
       "name": "sample-wiki",
       "source_type": "local",
       "source": "/tmp/sample-wiki",
-      "enabled": true,
+      "enabled": false,
       "status": "ok",
       "added": "2026-04-29",
       "embedding_backend": "search-chromadb",

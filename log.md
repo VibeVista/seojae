@@ -25,3 +25,5 @@
 - Cross-referenced: Software 2.0, Vibe Coding, Andrej Karpathy
 
 ## [2026-04-29] connect | sample
+
+## [2026-04-29] toggle | sample off
