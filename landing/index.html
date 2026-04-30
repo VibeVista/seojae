@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Seojae · Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-2: #111111;
+    --bg-3: #161616;
+    --fg: #f4f4f4;
+    --fg-soft: #a8a8a8;
+    --fg-faint: #6f6f6f;
+    --rule: #262626;
+    --rule-soft: #1a1a1a;
+    --green: #42be65;
+    --amber: #f1c21b;
+    --magenta: #ee5396;
+    --cyan: #33b1ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg); color: var(--fg);
+    font-family: 'IBM Plex Sans', 'IBM Plex Sans KR', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none; z-index: 0;
+  }
+  .page { position: relative; z-index: 1; }
+
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--bg);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px; font-weight: 500;
+  }
+  .brand-prompt { color: var(--green); }
+  .brand-han { color: var(--fg-faint); margin-left: 6px; }
+  .nav-links {
+    display: flex; gap: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+  .nav-links a {
+    color: var(--fg-soft); text-decoration: none;
+    padding: 8px 14px; transition: all 0.15s;
+  }
+  .nav-links a::before { content: "[ "; opacity: 0; transition: opacity 0.15s; color: var(--green); }
+  .nav-links a::after { content: " ]"; opacity: 0; transition: opacity 0.15s; color: var(--green); }
+  .nav-links a:hover { color: var(--fg); }
+  .nav-links a:hover::before, .nav-links a:hover::after { opacity: 1; }
+  .nav-cta {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    padding: 8px 14px;
+    background: var(--green); color: var(--bg);
+    text-decoration: none; font-weight: 500;
+    transition: background 0.15s;
+  }
+  .nav-cta:hover { background: #2dd45c; }
+
+  /* HERO — split: left text, right live terminal */
+  .hero {
+    display: grid;
+    grid-template-columns: 0.95fr 1.05fr;
+    min-height: calc(100vh - 60px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .hero-left {
+    padding: 80px 56px;
+    display: flex; flex-direction: column; justify-content: center;
+    border-right: 1px solid var(--rule);
+    position: relative;
+  }
+  .hero-left::before {
+    content: ""; position: absolute;
+    top: 24px; left: 24px; right: 24px;
+    height: 1px;
+    background: linear-gradient(90deg, var(--green), transparent 30%);
+    opacity: 0.5;
+  }
+  .hero-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--fg-faint);
+    margin-bottom: 36px;
+    display: flex; gap: 18px;
+  }
+  .hero-meta span::before { content: "// "; color: var(--green); }
+  .hero h1 {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    font-size: clamp(48px, 6.4vw, 92px);
+    line-height: 1.0;
+    letter-spacing: -0.035em;
+    margin-bottom: 24px;
+  }
+  .hero h1 .em {
+    font-weight: 600;
+    color: var(--green);
+  }
+  .hero h1 .han {
+    display: block;
+    font-family: 'IBM Plex Sans KR', sans-serif;
+    font-size: 0.36em;
+    color: var(--fg-soft);
+    font-weight: 300;
+    margin-top: 18px;
+    letter-spacing: 0.02em;
+  }
+  .hero p.lead {
+    font-size: 17px;
+    color: var(--fg-soft);
+    line-height: 1.6;
+    max-width: 480px;
+    margin-bottom: 36px;
+  }
+  .hero p.lead code {
+    font-family: 'IBM Plex Mono', monospace;
+    background: var(--bg-3);
+    padding: 2px 6px;
+    color: var(--green);
+    border: 1px solid var(--rule);
+    font-size: 0.92em;
+  }
+  .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; font-weight: 500;
+    padding: 13px 22px;
+    text-decoration: none;
+    cursor: pointer; border: none;
+    display: inline-flex; align-items: center; gap: 10px;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--green); color: var(--bg);
+  }
+  .btn-primary:hover { background: #2dd45c; }
+  .btn-ghost {
+    background: transparent; color: var(--fg);
+    border: 1px solid var(--rule);
+  }
+  .btn-ghost:hover { border-color: var(--green); color: var(--green); }
+
+  /* Live terminal */
+  .hero-right {
+    background: var(--bg-2);
+    padding: 32px;
+    display: flex; flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+  .term-window {
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    flex: 1;
+    display: flex; flex-direction: column;
+    box-shadow: 0 20px 80px -20px rgba(0,0,0,0.6);
+  }
+  .term-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--rule);
+    background: var(--bg-2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+  }
+  .term-tab {
+    padding: 12px 18px;
+    border-right: 1px solid var(--rule);
+    color: var(--fg-faint);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .term-tab.active { background: var(--bg); color: var(--fg); }
+  .term-tab .pip {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--rule);
+  }
+  .term-tab.active .pip { background: var(--green); animation: tabpulse 1.6s infinite; }
+  @keyframes tabpulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+  .term-tab .close { margin-left: 6px; opacity: 0.5; }
+  .term-status {
+    margin-left: auto; padding: 12px 18px;
+    color: var(--fg-faint);
+  }
+  .term-content {
+    flex: 1;
+    padding: 22px 26px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.75;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .line { white-space: pre-wrap; word-break: break-word; }
+  .l-comment { color: var(--fg-faint); }
+  .l-prompt { color: var(--green); }
+  .l-cmd { color: var(--fg); }
+  .l-arrow { color: var(--cyan); }
+  .l-ok { color: var(--green); }
+  .l-warn { color: var(--amber); }
+  .l-magenta { color: var(--magenta); }
+  .l-faint { color: var(--fg-faint); }
+  .l-string { color: var(--amber); font-style: italic; }
+  .blink {
+    display: inline-block; width: 8px; height: 14px;
+    background: var(--green); vertical-align: -2px;
+    animation: blink 1s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .typing { display: inline-block; }
+
+  /* Section heading style */
+  section.block {
+    padding: 100px 56px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .block-inner { max-width: 1280px; margin: 0 auto; }
+  .section-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--green);
+    margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-tag::before {
+    content: "$"; color: var(--green);
+  }
+  h2.s-title {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    font-size: clamp(36px, 4.8vw, 64px);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 20px;
+    max-width: 880px;
+  }
+  h2.s-title .em { font-weight: 600; color: var(--green); }
+  .s-sub {
+    color: var(--fg-soft);
+    font-size: 17px; line-height: 1.55;
+    max-width: 600px;
+    margin-bottom: 60px;
+  }
+
+  /* WORKFLOWS — IBM-style ledger */
+  .ledger {
+    border: 1px solid var(--rule);
+    background: var(--bg-2);
+  }
+  .ledger-row {
+    display: grid;
+    grid-template-columns: 80px 200px 240px 1fr 100px;
+    align-items: center;
+    border-bottom: 1px solid var(--rule);
+    padding: 24px 28px;
+    font-family: 'IBM Plex Mono', monospace;
+    transition: background 0.15s;
+  }
+  .ledger-row:last-child { border-bottom: none; }
+  .ledger-row:hover { background: var(--bg-3); }
+  .ledger-row.head {
+    font-size: 10px;
+    color: var(--fg-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    background: var(--bg);
+  }
+  .ledger-row.head:hover { background: var(--bg); }
+  .l-num { color: var(--fg-faint); font-size: 12px; }
+  .l-name { color: var(--green); font-size: 16px; font-weight: 500; }
+  .l-trigger { color: var(--amber); font-size: 13px; font-style: italic; }
+  .l-desc {
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--fg-soft); font-size: 14px;
+    line-height: 1.5;
+  }
+  .l-status { font-size: 11px; color: var(--fg-faint); text-align: right; }
+  .l-status .dot {
+    display: inline-block;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--green); margin-right: 6px;
+    animation: tabpulse 2s infinite;
+  }
+
+  /* DEMO — a long scrolling shell session */
+  .session-frame {
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    overflow: hidden;
+  }
+  .session-frame .term-tabs { background: var(--bg-3); }
+  .session-frame .term-content { padding: 28px 36px; min-height: 480px; }
+
+  /* TOOLS — three columns w/ keystrokes */
+  .tools-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--rule);
+  }
+  .tool {
+    padding: 36px 32px;
+    border-right: 1px solid var(--rule);
+    background: var(--bg-2);
+    transition: background 0.2s;
+    position: relative;
+  }
+  .tool:last-child { border-right: none; }
+  .tool:hover { background: var(--bg-3); }
+  .tool-name {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 22px; font-weight: 500;
+    margin-bottom: 4px; letter-spacing: -0.01em;
+  }
+  .tool-rule {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; color: var(--green);
+    margin-bottom: 22px;
+  }
+  .tool-desc {
+    color: var(--fg-soft); font-size: 14px; line-height: 1.55;
+    margin-bottom: 20px;
+  }
+  .tool-cmd {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    background: var(--bg); border: 1px solid var(--rule);
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    color: var(--fg);
+  }
+  .tool-cmd::before { content: "$"; color: var(--green); }
+
+  /* QUICK START — big terminal */
+  .qs-terminal {
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+  }
+  .qs-body {
+    padding: 36px 44px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px; line-height: 1.95;
+  }
+
+  /* FOOTER / CTA */
+  .closer {
+    padding: 140px 56px 80px;
+    text-align: center;
+    border-bottom: 1px solid var(--rule);
+    position: relative;
+  }
+  .closer h2 {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    font-size: clamp(48px, 6.4vw, 96px);
+    line-height: 1;
+    letter-spacing: -0.035em;
+    margin-bottom: 18px;
+  }
+  .closer h2 .em { font-weight: 600; color: var(--green); }
+  .closer p {
+    color: var(--fg-soft);
+    margin-bottom: 36px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+  footer {
+    padding: 28px 56px;
+    display: flex; justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--fg-faint);
+  }
+
+  .reveal {
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.7s, transform 0.7s;
+  }
+  .reveal.in { opacity: 1; transform: translateY(0); }
+  @media (scripting: none) {
+    .reveal { opacity: 1; transform: none; }
+  }
+
+  /* status bar */
+  .status-bar {
+    background: var(--green); color: var(--bg);
+    padding: 6px 32px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    display: flex; gap: 24px;
+    letter-spacing: 0.03em;
+  }
+  .status-bar span::before { content: "● "; }
+
+  /* Responsive: collapse multi-column layouts on narrow viewports */
+  @media (max-width: 900px) {
+    nav { flex-wrap: wrap; padding: 14px 20px; gap: 10px; }
+    .nav-links { order: 3; flex-basis: 100%; flex-wrap: wrap; }
+    .nav-links a { padding: 6px 10px; }
+    .status-bar { padding: 6px 20px; flex-wrap: wrap; gap: 14px; }
+    .status-bar span[style*="margin-left"] { margin-left: 0 !important; }
+    .hero { grid-template-columns: 1fr; min-height: auto; }
+    .hero-left {
+      padding: 56px 24px 48px;
+      border-right: none;
+      border-bottom: 1px solid var(--rule);
+    }
+    .hero-left::before { left: 16px; right: 16px; top: 16px; }
+    .hero p.lead { font-size: 16px; }
+    .hero-right { padding: 20px; min-height: 420px; }
+    section.block { padding: 64px 24px; }
+    h2.s-title { font-size: clamp(32px, 7vw, 48px); }
+    .s-sub { font-size: 16px; margin-bottom: 36px; }
+    .ledger-row {
+      grid-template-columns: 56px 1fr;
+      grid-row-gap: 6px;
+      grid-column-gap: 14px;
+      padding: 18px 20px;
+    }
+    .ledger-row .l-trigger,
+    .ledger-row .l-desc,
+    .ledger-row .l-status { grid-column: 2; }
+    .ledger-row .l-status { text-align: left; }
+    .ledger-row.head { display: none; }
+    .tools-row { grid-template-columns: 1fr; }
+    .tool {
+      border-right: none;
+      border-bottom: 1px solid var(--rule);
+      padding: 28px 24px;
+    }
+    .tool:last-child { border-bottom: none; }
+    .qs-body { padding: 24px 20px; font-size: 13px; }
+    .session-frame .term-content { padding: 22px 22px; min-height: 360px; }
+    .closer { padding: 96px 24px 64px; }
+    footer { flex-direction: column; gap: 8px; padding: 20px 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="status-bar">
+    <span>master</span>
+    <span style="margin-left:auto;">v0.4.2</span>
+    <span>python 3.9+</span>
+    <span>MIT</span>
+    <span>tested · ✓</span>
+  </div>
+
+  <nav>
+    <div class="brand">
+      <span class="brand-prompt">~/</span>seojae<span class="brand-han">// 서재</span>
+    </div>
+    <div class="nav-links">
+      <a href="#how">workflows</a>
+      <a href="#demo">session</a>
+      <a href="#tools">tools</a>
+      <a href="#start">quick-start</a>
+    </div>
+    <a class="nav-cta" href="https://github.com/Laeyoung/seojae">git clone ↗</a>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-left">
+      <div class="hero-meta">
+        <span>v0.4.2</span>
+        <span>MIT</span>
+        <span>cli + llm</span>
+      </div>
+      <h1>
+        Talk to your<br>
+        <span class="em">knowledge base.</span>
+        <span class="han">자료를 던지면, 위키가 자랍니다.</span>
+      </h1>
+      <p class="lead">
+        Seojae는 LLM-driven 위키 프레임워크입니다.
+        <code>raw/</code>에 파일을 두고 자연어로 말하면, Claude·Codex·Gemini가
+        구조화된 <code>wiki/</code>를 만들어 갑니다 — IDE에서, 한 세션 안에서.
+      </p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="#start">$ git clone</a>
+        <a class="btn btn-ghost" href="#demo">→ run demo session</a>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <div class="term-window">
+        <div class="term-tabs">
+          <div class="term-tab active">
+            <span class="pip"></span>
+            <span>claude — ~/seojae</span>
+            <span class="close">×</span>
+          </div>
+          <div class="term-tab">
+            <span class="pip"></span>
+            <span>zsh</span>
+            <span class="close">×</span>
+          </div>
+          <div class="term-status">80×24 · utf-8</div>
+        </div>
+        <div class="term-content" id="hero-term">
+          <!-- typewriter target -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WORKFLOWS -->
+  <section class="block reveal" id="how">
+    <div class="block-inner">
+      <div class="section-tag">workflows --list</div>
+      <h2 class="s-title">Five commands.<br><span class="em">All natural language.</span></h2>
+      <p class="s-sub">한 줄로 시작되는 다섯 개의 의식. 자연어가 곧 트리거입니다.</p>
+
+      <div class="ledger">
+        <div class="ledger-row head">
+          <div>id</div>
+          <div>name</div>
+          <div>trigger phrase</div>
+          <div>description</div>
+          <div>status</div>
+        </div>
+        <div class="ledger-row">
+          <div class="l-num">01</div>
+          <div class="l-name">ingest</div>
+          <div class="l-trigger">"이거 ingest해줘"</div>
+          <div class="l-desc">Process a raw source into wiki pages — summaries, entities, concepts, synthesis.</div>
+          <div class="l-status"><span class="dot"></span>ready</div>
+        </div>
+        <div class="ledger-row">
+          <div class="l-num">02</div>
+          <div class="l-name">query</div>
+          <div class="l-trigger">"attention이 뭐야?"</div>
+          <div class="l-desc">Answer questions using wiki content with semantic search.</div>
+          <div class="l-status"><span class="dot"></span>ready</div>
+        </div>
+        <div class="ledger-row">
+          <div class="l-num">03</div>
+          <div class="l-name">check-new</div>
+          <div class="l-trigger">"새 자료 확인"</div>
+          <div class="l-desc">Detect and batch-ingest new raw sources.</div>
+          <div class="l-status"><span class="dot"></span>ready</div>
+        </div>
+        <div class="ledger-row">
+          <div class="l-num">04</div>
+          <div class="l-name">lint</div>
+          <div class="l-trigger">"위키 점검"</div>
+          <div class="l-desc">Health-check the wiki: orphan pages, broken links, growth suggestions.</div>
+          <div class="l-status"><span class="dot"></span>ready</div>
+        </div>
+        <div class="ledger-row">
+          <div class="l-num">05</div>
+          <div class="l-name">reindex</div>
+          <div class="l-trigger">"인덱스 재구성"</div>
+          <div class="l-desc">Rebuild the semantic search index from scratch.</div>
+          <div class="l-status"><span class="dot"></span>ready</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DEMO SESSION -->
+  <section class="block reveal" id="demo">
+    <div class="block-inner">
+      <div class="section-tag">session.replay --speed 1x</div>
+      <h2 class="s-title">A real session,<br><span class="em">replayed.</span></h2>
+      <p class="s-sub">Karpathy 글 3편을 ingest해, 7개의 교차 참조 페이지가 만들어지는 과정.</p>
+
+      <div class="session-frame">
+        <div class="term-tabs">
+          <div class="term-tab active">
+            <span class="pip"></span>
+            <span>claude — initialize wiki</span>
+          </div>
+          <div class="term-status">replay · 00:00 / 00:42</div>
+        </div>
+        <div class="term-content" id="session-term">
+          <!-- filled at scroll-in -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TOOLS -->
+  <section class="block reveal" id="tools">
+    <div class="block-inner">
+      <div class="section-tag">compatibility</div>
+      <h2 class="s-title">Bring <span class="em">your own LLM tool.</span></h2>
+      <p class="s-sub">스키마는 마크다운입니다. 마크다운 지시문을 읽는 도구라면 어디서든 동작합니다.</p>
+
+      <div class="tools-row">
+        <div class="tool">
+          <div class="tool-name">Claude Code</div>
+          <div class="tool-rule">CLAUDE.md</div>
+          <div class="tool-desc">세션 시작 시 자동 import. 첫 셋업 후 한 번 재시작이 필요합니다.</div>
+          <div class="tool-cmd">claude</div>
+        </div>
+        <div class="tool">
+          <div class="tool-name">Codex CLI</div>
+          <div class="tool-rule">AGENTS.md</div>
+          <div class="tool-desc">32 KiB 제한 안에 인라인. 별도 import 없이 즉시 동작합니다.</div>
+          <div class="tool-cmd">codex</div>
+        </div>
+        <div class="tool">
+          <div class="tool-name">Gemini CLI</div>
+          <div class="tool-rule">GEMINI.md</div>
+          <div class="tool-desc">@./WIKI_SCHEMA.md 문법으로 스키마와 활성 확장을 로드합니다.</div>
+          <div class="tool-cmd">gemini</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUICK START -->
+  <section class="block reveal" id="start">
+    <div class="block-inner">
+      <div class="section-tag">quick-start --3-steps</div>
+      <h2 class="s-title">Clone. Open.<br><span class="em">Tell it what to do.</span></h2>
+      <p class="s-sub">빌드 단계 없음. 설정 파일 없음. 세 줄이면 시작합니다.</p>
+
+      <div class="qs-terminal">
+        <div class="term-tabs">
+          <div class="term-tab active"><span class="pip"></span><span>~ — quick start</span></div>
+        </div>
+        <div class="qs-body">
+          <div class="line"><span class="l-comment"># 1. 리포 클론</span></div>
+          <div class="line"><span class="l-prompt">$</span> <span class="l-cmd">git clone https://github.com/Laeyoung/seojae.git</span></div>
+          <div class="line"><span class="l-prompt">$</span> <span class="l-cmd">cd seojae</span></div>
+          <div style="height:14px;"></div>
+          <div class="line"><span class="l-comment"># 2. LLM 도구 열기 — 규칙 파일 자동 로드</span></div>
+          <div class="line"><span class="l-prompt">$</span> <span class="l-cmd">claude</span></div>
+          <div class="line"><span class="l-faint">  loading CLAUDE.md...</span></div>
+          <div class="line"><span class="l-faint">  loading WIKI_SCHEMA.md...</span></div>
+          <div class="line"><span class="l-faint">  loading 3 extensions...</span></div>
+          <div class="line"><span class="l-ok">  ✓ ready</span></div>
+          <div style="height:14px;"></div>
+          <div class="line"><span class="l-comment"># 3. 자연어로 시작</span></div>
+          <div class="line"><span class="l-prompt">›</span> <span class="l-string">"위키 초기화해줘"</span><span class="blink"></span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="closer reveal">
+    <h2>Build your wiki.<br><span class="em">In a single session.</span></h2>
+    <p>github.com/Laeyoung/seojae · MIT · 2026</p>
+    <a class="btn btn-primary" href="https://github.com/Laeyoung/seojae" style="font-size:14px;padding:15px 24px;">$ git clone seojae</a>
+  </section>
+
+  <footer>
+    <span>// © 2026 seojae · 서재</span>
+    <span>// designed for LLM coding tools</span>
+  </footer>
+
+</div>
+
+<script>
+  // reveal-on-scroll
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // ─── Hero typewriter ────────────────────────────────
+  const heroTerm = document.getElementById('hero-term');
+  const heroScript = [
+    { txt: '$ ', cls: 'l-prompt' }, { txt: 'cd seojae && claude\n', cls: 'l-cmd' },
+    { txt: '  loading CLAUDE.md... ', cls: 'l-faint' },
+    { txt: 'ok\n', cls: 'l-ok' },
+    { txt: '  loading WIKI_SCHEMA.md... ', cls: 'l-faint' },
+    { txt: 'ok\n', cls: 'l-ok' },
+    { txt: '\n', cls: '' },
+    { txt: '> ', cls: 'l-prompt' },
+    { txt: '"위키 초기화해줘"\n', cls: 'l-string' },
+    { txt: '\n', cls: '' },
+    { txt: '⠋ creating venv...\n', cls: 'l-faint' },
+    { txt: '⠙ installing requirements... ', cls: 'l-faint' },
+    { txt: '✓\n', cls: 'l-ok' },
+    { txt: '⠹ building search index... ', cls: 'l-faint' },
+    { txt: '✓\n', cls: 'l-ok' },
+    { txt: '\n', cls: '' },
+    { txt: '> ', cls: 'l-prompt' },
+    { txt: '"raw/articles/software-2.0.md ingest"\n', cls: 'l-string' },
+    { txt: '\n', cls: '' },
+    { txt: '  → ', cls: 'l-arrow' }, { txt: 'wiki/sources/software-2.0.md\n', cls: 'l-cmd' },
+    { txt: '  → ', cls: 'l-arrow' }, { txt: 'wiki/concepts/software-2.0.md\n', cls: 'l-cmd' },
+    { txt: '  → ', cls: 'l-arrow' }, { txt: 'wiki/entities/andrej-karpathy.md\n', cls: 'l-cmd' },
+    { txt: '  ', cls: '' }, { txt: '✓ 3 pages · 7 cross-refs\n', cls: 'l-ok' },
+    { txt: '\n> ', cls: 'l-prompt' },
+  ];
+
+  function typeScript(target, script, charDelay = 14, blinkAtEnd = true) {
+    let i = 0, j = 0;
+    let curSpan = null;
+    function tick() {
+      if (i >= script.length) {
+        if (blinkAtEnd) {
+          const b = document.createElement('span');
+          b.className = 'blink';
+          target.appendChild(b);
+        }
+        return;
+      }
+      const part = script[i];
+      if (j === 0) {
+        curSpan = document.createElement('span');
+        if (part.cls) curSpan.className = part.cls;
+        target.appendChild(curSpan);
+      }
+      const ch = part.txt[j];
+      curSpan.textContent += ch;
+      j++;
+      if (j >= part.txt.length) { i++; j = 0; }
+      // scroll only when a line completes, to avoid per-char layout thrash
+      if (ch === '\n') target.scrollTop = target.scrollHeight;
+      // newlines / arrows pause briefly
+      const delay = ch === '\n' ? 80 : (ch === '✓' ? 200 : charDelay);
+      setTimeout(tick, delay);
+    }
+    tick();
+  }
+  setTimeout(() => typeScript(heroTerm, heroScript), 600);
+
+  // ─── Session demo ─ replays once on scroll-in ────────
+  const sessionTerm = document.getElementById('session-term');
+  const sessionScript = [
+    { txt: '$ ', cls: 'l-prompt' }, { txt: 'ls raw/\n', cls: 'l-cmd' },
+    { txt: 'articles/software-2.0.md\n', cls: 'l-faint' },
+    { txt: 'articles/vibe-coding.md\n', cls: 'l-faint' },
+    { txt: 'videos/intro-to-llms.md\n', cls: 'l-faint' },
+    { txt: '\n', cls: '' },
+    { txt: '$ ', cls: 'l-prompt' }, { txt: 'claude\n', cls: 'l-cmd' },
+    { txt: '\n', cls: '' },
+    { txt: '> ', cls: 'l-prompt' }, { txt: '"check for new sources"\n', cls: 'l-string' },
+    { txt: '\n', cls: '' },
+    { txt: '  found 3 new sources. ingest all? [y/N] ', cls: 'l-faint' },
+    { txt: 'y\n', cls: 'l-warn' },
+    { txt: '\n', cls: '' },
+    { txt: '⠹ ', cls: 'l-faint' }, { txt: 'ingesting software-2.0.md\n', cls: 'l-cmd' },
+    { txt: '  + ', cls: 'l-ok' }, { txt: 'wiki/sources/software-2.0.md\n', cls: 'l-cmd' },
+    { txt: '  + ', cls: 'l-ok' }, { txt: 'wiki/concepts/software-2.0.md\n', cls: 'l-cmd' },
+    { txt: '  + ', cls: 'l-ok' }, { txt: 'wiki/entities/andrej-karpathy.md  ', cls: 'l-cmd' },
+    { txt: '[backlinks: 4]\n', cls: 'l-magenta' },
+    { txt: '\n', cls: '' },
+    { txt: '⠹ ', cls: 'l-faint' }, { txt: 'ingesting vibe-coding.md\n', cls: 'l-cmd' },
+    { txt: '  + ', cls: 'l-ok' }, { txt: 'wiki/sources/vibe-coding.md\n', cls: 'l-cmd' },
+    { txt: '  + ', cls: 'l-ok' }, { txt: 'wiki/concepts/vibe-coding.md   ', cls: 'l-cmd' },
+    { txt: '[related: software-2.0]\n', cls: 'l-magenta' },
+    { txt: '  ↻ ', cls: 'l-arrow' }, { txt: 'updated entities/andrej-karpathy.md\n', cls: 'l-cmd' },
+    { txt: '\n', cls: '' },
+    { txt: '⠹ ', cls: 'l-faint' }, { txt: 'ingesting intro-to-llms.md\n', cls: 'l-cmd' },
+    { txt: '  + ', cls: 'l-ok' }, { txt: 'wiki/sources/intro-to-llms.md\n', cls: 'l-cmd' },
+    { txt: '  ↻ ', cls: 'l-arrow' }, { txt: 'updated entities/andrej-karpathy.md\n', cls: 'l-cmd' },
+    { txt: '\n', cls: '' },
+    { txt: '★ ', cls: 'l-warn' }, { txt: 'detected synthesis opportunity\n', cls: 'l-cmd' },
+    { txt: '  + ', cls: 'l-ok' }, { txt: 'wiki/synthesis/karpathy-1.0-2.0-vibe.md\n', cls: 'l-cmd' },
+    { txt: '\n', cls: '' },
+    { txt: '✓ ', cls: 'l-ok' }, { txt: 'done · 7 pages · 12 cross-refs · 0 orphans\n', cls: 'l-cmd' },
+    { txt: '\n> ', cls: 'l-prompt' },
+  ];
+
+  let sessionStarted = false;
+  const demoIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting && !sessionStarted) {
+        sessionStarted = true;
+        typeScript(sessionTerm, sessionScript, 8);
+      }
+    });
+  }, { threshold: 0.3 });
+  demoIO.observe(document.getElementById('demo'));
+</script>
+</body>
+</html>
