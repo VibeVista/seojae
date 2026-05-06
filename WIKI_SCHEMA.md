@@ -96,6 +96,8 @@ for your tool with environment-specific settings.
 | `index.md`, `log.md` | LLM only | LLM + User | None |
 | `WIKI_SCHEMA.md` | User + LLM | LLM | **Possible** |
 | `README.md` | User + LLM | User | **Possible** |
+| `connected-wikis/` | LLM only (clone/pull) | LLM + User | None |
+| `connected-wikis.json` | LLM only | LLM + User | None |
 
 **Absolute rules:**
 - Never modify files in `raw/`.
@@ -265,7 +267,7 @@ A categorized wiki catalog. Updated after every Ingest, Query save, and Lint.
 Chronological, append-only record. Parseable with `grep "^## \[" log.md | tail -5`.
 
 - Header format: `## [YYYY-MM-DD] <action> | <title>`
-- Actions: `init`, `ingest`, `query`, `lint`, `check-new`
+- Actions: `init`, `ingest`, `query`, `lint`, `check-new`, `connect`, `toggle`, `disconnect`, `pull`, `extension`
 - Source file paths always use the `- Source: <path>` prefix (the Check-New workflow parses already-processed sources using the `^- Source: ` pattern).
 - Entry bodies also record pages created/modified.
 
@@ -277,6 +279,11 @@ Chronological, append-only record. Parseable with `grep "^## \[" log.md | tail -
 - `lint: <fix summary>` — Wiki maintenance
 - `check-new: <N sources processed>` — Batch new source processing summary (after individual ingest commits)
 - `schema: <change description>` — WIKI_SCHEMA.md or README.md changes
+- `extension: enable <name>` — Extension activation (e.g., connected-wikis bootstrap)
+- `connect: <id>` — External wiki connected
+- `disconnect: <id>` — External wiki disconnected
+- `pull: <N wikis updated>` — Connected wikis refreshed
+- `config: toggle <id>` — External wiki enabled/disabled
 
 ### Git Workflow
 

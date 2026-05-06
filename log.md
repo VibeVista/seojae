@@ -23,3 +23,15 @@
 
 - Created: wiki/synthesis/karpathy-software-evolution.md
 - Cross-referenced: Software 2.0, Vibe Coding, Andrej Karpathy
+
+## [2026-04-29] connect | sample
+
+## [2026-04-29] toggle | sample off
+
+## [2026-04-29] toggle | sample on
+
+## [2026-04-29] disconnect | sample
+
+## [2026-04-29] connect | eng
+
+## [2026-04-29] disconnect | eng

@@ -19,3 +19,7 @@ search-index/
 .remember/
 .ouroboros/
 .envrc
+
+# Connected Knowledge Bases (clones are user-machine-specific)
+connected-wikis/
+connected-wikis.lock
