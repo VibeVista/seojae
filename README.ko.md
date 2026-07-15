@@ -107,17 +107,19 @@ gemini          # Gemini CLI
 ## CLI 레퍼런스
 
 `tools/search.py`는 LLM 도구 없이 독립적으로 사용할 수 있는 유일한 컴포넌트입니다.
-Python venv가 활성화된 상태에서 실행해야 합니다.
+먼저 venv를 활성화하세요 (또는 매 명령에 `venv/bin/python` 프리픽스 사용):
 
 ```bash
+source venv/bin/activate
+
 # 시맨틱 검색
-venv/bin/python tools/search.py --query "attention mechanism" --top 5
+python tools/search.py --query "attention mechanism" --top 5
 
 # 인덱스에 페이지 추가/업데이트
-venv/bin/python tools/search.py --add wiki/concepts/attention-mechanism.md
+python tools/search.py --add wiki/concepts/attention-mechanism.md
 
 # 전체 인덱스 재구성
-venv/bin/python tools/search.py --reindex
+python tools/search.py --reindex
 ```
 
 | 인자 | 기본값 | 설명 |
@@ -160,8 +162,9 @@ venv/bin/python tools/search.py --reindex
   ([사용 가이드](docs/connected-wikis-guide.ko.md)). 공개 샘플 위키
   [`Laeyoung/den`](https://github.com/Laeyoung/den)으로 바로 테스트할 수 있습니다:
   ```bash
-  venv/bin/python tools/connected_wikis.py connect https://github.com/Laeyoung/den --id den --decision consent=accept
-  venv/bin/python tools/search.py --query "에스프레소 추출" --collections wiki,wiki-ext-den
+  source venv/bin/activate
+  python tools/connected_wikis.py connect https://github.com/Laeyoung/den --id den --decision consent=accept
+  python tools/search.py --query "에스프레소 추출" --collections wiki,wiki-ext-den
   ```
 
 직접 만들고 싶다면 [extensions/README.md](extensions/README.md)를 참고하세요.

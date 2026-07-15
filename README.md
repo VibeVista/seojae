@@ -107,17 +107,19 @@ See [docs/getting-started.md](docs/getting-started.md) for a detailed walkthroug
 ## CLI Reference
 
 `tools/search.py` is the only component usable without an LLM tool.
-It requires the Python venv to be active.
+Activate the venv first (or prefix commands with `venv/bin/python`):
 
 ```bash
+source venv/bin/activate
+
 # Semantic search
-venv/bin/python tools/search.py --query "attention mechanism" --top 5
+python tools/search.py --query "attention mechanism" --top 5
 
 # Add/update a page in the index
-venv/bin/python tools/search.py --add wiki/concepts/attention-mechanism.md
+python tools/search.py --add wiki/concepts/attention-mechanism.md
 
 # Rebuild the full index
-venv/bin/python tools/search.py --reindex
+python tools/search.py --reindex
 ```
 
 | Argument | Default | Description |
@@ -160,8 +162,9 @@ LLM instructions that are loaded alongside the core schema.
   ([사용 가이드](docs/connected-wikis-guide.ko.md)). Try it right away with the public
   sample wiki [`Laeyoung/den`](https://github.com/Laeyoung/den):
   ```bash
-  venv/bin/python tools/connected_wikis.py connect https://github.com/Laeyoung/den --id den --decision consent=accept
-  venv/bin/python tools/search.py --query "espresso extraction" --collections wiki,wiki-ext-den
+  source venv/bin/activate
+  python tools/connected_wikis.py connect https://github.com/Laeyoung/den --id den --decision consent=accept
+  python tools/search.py --query "espresso extraction" --collections wiki,wiki-ext-den
   ```
 
 See [extensions/README.md](extensions/README.md) for details on creating your own.
