@@ -38,9 +38,9 @@ actions on `main` after this branch is merged.
 
 ## Post-merge (maintainer)
 
-- [ ] Merge launch PR into `main` (requires user approval per branch policy)
-- [ ] Tag and publish release: `git tag v1.0.0 && git push --tags`, then
-  `gh release create v1.0.0` — see RELEASE_GUIDE.md
+- [x] Merge launch PR into `main` (PR #9, merged 2026-07-16)
+- [x] Tag and publish release —
+  [v1.0.0](https://github.com/VibeVista/seojae/releases/tag/v1.0.0)
 - [ ] (Optional) Enable GitHub Pages for `landing/` (Settings → Pages)
 - [ ] (Optional) Upload a 1280×640 social preview image (Settings → Social preview)
 - [ ] (Optional) Enable GitHub Discussions for community Q&A
