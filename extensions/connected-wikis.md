@@ -19,6 +19,11 @@ runs `tools/connected_wikis.py init` automatically, which:
 
 Manual init: `venv/bin/python tools/connected_wikis.py init`
 
+**Sample wiki for testing:** a public fixture wiki is available at
+`https://github.com/Laeyoung/den` (coffee-knowledge pages; suggested id: `den`).
+Use it to demo or verify the Connect/Query/Pull/Disconnect workflows end-to-end
+— see the walkthrough in `docs/connected-wikis-guide.ko.md` §0.
+
 ## Workflows
 
 This extension adds six workflows (`Init`, `Connect`, `Toggle`, `Disconnect`,

@@ -4,6 +4,44 @@
 
 > **3분 요약:** `connect`(신뢰 확인 포함) → `list` → `query` → `toggle` → `pull` → `disconnect`. 외부 wiki는 별도 ChromaDB 컬렉션 `wiki-ext-<id>`에 인덱싱되며 로컬 wiki와 격리됩니다.
 
+> 이 가이드의 명령은 venv가 활성화된 상태(`source venv/bin/activate`)를 가정합니다.
+> 활성화 없이 실행하려면 `python` 대신 `venv/bin/python`을 쓰세요.
+> (LLM 도구가 실행할 때는 항상 `venv/bin/python` full path를 씁니다 — CLAUDE.md 환경 규칙.)
+
+---
+
+## 0. 바로 해보기 — 공개 샘플 위키 `Laeyoung/den`
+
+친구의 wiki가 아직 없어도 됩니다. 이 기능의 E2E 검증에 사용된 공개 샘플 위키
+[`Laeyoung/den`](https://github.com/Laeyoung/den)(커피 지식 위키, 페이지 3개)이 준비되어 있습니다.
+main 브랜치를 받고 [환경 설정](../WIKI_SCHEMA.md#setup)만 마쳤다면 그대로 실행해 보세요.
+
+```bash
+source venv/bin/activate
+
+# 1) 연결 — README 미리보기와 함께 신뢰 확인 프롬프트가 뜹니다 (exit 4)
+python tools/connected_wikis.py connect https://github.com/Laeyoung/den --id den
+# PROMPT: consent | Trust external wiki 'den' content? ...
+# OPTIONS: accept reject
+
+# 2) 내용을 확인했으면 승인과 함께 재호출 — 클론 → 인덱싱 → Connected: den
+python tools/connected_wikis.py connect https://github.com/Laeyoung/den --id den --decision consent=accept
+
+# 3) 연결 상태 확인 (pages: 3)
+python tools/connected_wikis.py list
+
+# 4) 내 wiki + den 통합 검색 — den의 커피 페이지가 상위에 나옵니다
+python tools/search.py --query "에스프레소 추출 시간과 분쇄도" --collections wiki,wiki-ext-den
+# connected-wikis/den/wiki/concepts/espresso-extraction.md [wiki: wiki-ext-den] [score: 0.48]
+# ...
+
+# 5) 실험이 끝나면 정리
+python tools/connected_wikis.py disconnect den
+```
+
+첫 실행이라면 임베딩 모델(~470MB) 다운로드로 수 분 걸릴 수 있습니다(§1.2 참고).
+아래부터는 이 과정 하나하나가 무엇을 하는지, 실제 상황(친구의 wiki 연결)에 어떻게 쓰는지를 설명합니다.
+
 ---
 
 ## 1. 사전 준비
@@ -16,6 +54,7 @@
 |---|---|---|
 | **Git 원격** | `https://github.com/friend/spain-travel-wiki` | 클론 → 인덱싱. `pull`로 동기화 |
 | **로컬 경로** | `/Users/me/another-wiki` | mtime 기반 동기화. 같은 머신의 다른 seojae 폴더 |
+| **공개 샘플** | `https://github.com/Laeyoung/den` | 바로 테스트용 커피 지식 위키 (§0 참고) |
 
 외부 wiki는 seojae 구조(`wiki/` 디렉토리에 frontmatter 있는 `*.md` 페이지들)를 따라야 합니다.
 
@@ -24,14 +63,14 @@
 기본 설치에는 `extensions/search-chromadb.md`가 활성화되어 있어야 합니다. 확인:
 
 ```bash
-venv/bin/python tools/search.py --print-model
+python tools/search.py --print-model
 # backend=search-chromadb
 # model=paraphrase-multilingual-MiniLM-L12-v2
 ```
 
 이 두 줄이 안 나오면 `extensions/` 디렉토리에 `search-chromadb.md`가 있는지 확인하세요.
 
-> **⚠️ 첫 실행 모델 다운로드:** 임베딩 모델(`paraphrase-multilingual-MiniLM-L12-v2`, 약 **470MB**)이 캐시에 없다면 첫 `connect` 또는 `--reindex` 중에 자동으로 다운로드됩니다. 진행 표시 없이 수 분간 멈춘 것처럼 보일 수 있습니다. 미리 캐시하려면 로컬 wiki 인덱스를 먼저 빌드하세요: `venv/bin/python tools/search.py --reindex`.
+> **⚠️ 첫 실행 모델 다운로드:** 임베딩 모델(`paraphrase-multilingual-MiniLM-L12-v2`, 약 **470MB**)이 캐시에 없다면 첫 `connect` 또는 `--reindex` 중에 자동으로 다운로드됩니다. 진행 표시 없이 수 분간 멈춘 것처럼 보일 수 있습니다. 미리 캐시하려면 로컬 wiki 인덱스를 먼저 빌드하세요: `python tools/search.py --reindex`.
 
 ### 1.3 connected-wikis 확장
 
@@ -66,11 +105,11 @@ CLI는 두 가지 방식 중 선택할 수 있습니다.
 
 ```bash
 # 1단계: --decision 없이 호출하면 README 미리보기 + PROMPT 출력 후 exit 4
-venv/bin/python tools/connected_wikis.py connect \
+python tools/connected_wikis.py connect \
   https://github.com/friend/spain-travel-wiki --id spain
 
 # 2단계: 신뢰하기로 결정했다면 같은 명령에 --decision을 붙여 재호출
-venv/bin/python tools/connected_wikis.py connect \
+python tools/connected_wikis.py connect \
   https://github.com/friend/spain-travel-wiki --id spain \
   --decision consent=accept
 ```
@@ -80,7 +119,7 @@ venv/bin/python tools/connected_wikis.py connect \
 **방식 B: 한 번에** — 신뢰가 이미 확인되었다면 처음부터 `--decision` 포함:
 
 ```bash
-venv/bin/python tools/connected_wikis.py connect \
+python tools/connected_wikis.py connect \
   https://github.com/friend/spain-travel-wiki \
   --id spain \
   --decision consent=accept
@@ -113,7 +152,7 @@ Connected: spain
 ## 3. 연결 상태 확인
 
 ```bash
-venv/bin/python tools/connected_wikis.py list
+python tools/connected_wikis.py list
 ```
 
 출력 (실제로 GFM 표 구분 행이 함께 출력됩니다):
@@ -159,7 +198,7 @@ LLM은 자동으로:
 ### 4.2 CLI 직접 사용
 
 ```bash
-venv/bin/python tools/search.py \
+python tools/search.py \
   --query "Madrid restaurants" \
   --top 5 \
   --collections wiki,wiki-ext-spain
@@ -206,13 +245,13 @@ wiki/entities/some-restaurant.md [wiki: wiki] [score: 0.37]
 또는:
 
 ```bash
-venv/bin/python tools/connected_wikis.py toggle spain off
+python tools/connected_wikis.py toggle spain off
 ```
 
 `enabled` 플래그만 false로 바뀝니다. ChromaDB 컬렉션과 클론 디렉토리는 그대로 유지되므로, 다시 켜면 즉시 검색에 포함됩니다 (재인덱싱 불필요).
 
 ```bash
-venv/bin/python tools/connected_wikis.py toggle spain on
+python tools/connected_wikis.py toggle spain on
 ```
 
 ---
@@ -224,7 +263,7 @@ venv/bin/python tools/connected_wikis.py toggle spain on
 > **"연결된 wiki들 업데이트해줘"**
 
 ```bash
-venv/bin/python tools/connected_wikis.py pull
+python tools/connected_wikis.py pull
 ```
 
 내부적으로:
@@ -263,7 +302,7 @@ CLI는 먼저 로컬 wiki에서 해당 id의 인용을 검색해 사용자에게
 **1단계: 인용 검색 (먼저 실행)**
 
 ```bash
-venv/bin/python tools/connected_wikis.py disconnect spain
+python tools/connected_wikis.py disconnect spain
 ```
 
 인용이 없으면 그대로 진행됩니다. 있으면 다음과 같이 출력하고 결정을 요청하며 exit 4로 종료됩니다:
@@ -283,7 +322,7 @@ OPTIONS: proceed abort
 - `abort`: 중단 (먼저 로컬 페이지를 정리하라는 신호)
 
 ```bash
-venv/bin/python tools/connected_wikis.py disconnect spain \
+python tools/connected_wikis.py disconnect spain \
   --decision disconnect-grep=proceed
 ```
 
@@ -322,12 +361,12 @@ git push origin main  # github.com/me/wiki-B
 ```bash
 # A 머신에서 (B의 wiki를 연결)
 cd ~/wiki-A
-venv/bin/python tools/connected_wikis.py connect \
+python tools/connected_wikis.py connect \
   https://github.com/me/wiki-B --id b --decision consent=accept
 
 # B 머신에서 (A의 wiki를 연결)
 cd ~/wiki-B
-venv/bin/python tools/connected_wikis.py connect \
+python tools/connected_wikis.py connect \
   https://github.com/me/wiki-A --id a --decision consent=accept
 ```
 
@@ -339,7 +378,7 @@ venv/bin/python tools/connected_wikis.py connect \
 
 ```bash
 cd ~/wiki-A
-venv/bin/python tools/connected_wikis.py connect \
+python tools/connected_wikis.py connect \
   /Users/me/wiki-B --id b --decision consent=accept
 ```
 
