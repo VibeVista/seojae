@@ -34,7 +34,7 @@ actions on `main` after this branch is merged.
 
 - [x] Test suite passes locally (`SKIP_MODEL_TESTS=true pytest` — 131 passed)
 - [x] GitHub Actions CI on push/PR (Python 3.9 & 3.12 matrix)
-- [ ] CI green on the launch PR (verify on GitHub after push)
+- [x] CI green on the launch PR (#9: Python 3.9 & 3.12 both pass)
 
 ## Post-merge (maintainer)
 
