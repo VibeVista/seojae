@@ -3,6 +3,9 @@
 Seojae에 관심을 가져주셔서 감사합니다! 이 가이드는 기여를 시작하는
 방법, 받아들이는 기여 유형, 그리고 따르는 컨벤션을 설명합니다.
 
+이 프로젝트에 참여하는 것은 [행동 강령(Code of Conduct)](CODE_OF_CONDUCT.md)을
+준수하는 것에 동의함을 의미합니다.
+
 ## 기여 방법
 
 **이슈** — 버그 리포트, 기능 요청, 확장(Extension) 아이디어를 환영합니다.
@@ -22,7 +25,7 @@ git 히스토리가 깔끔해집니다.
 
 ```bash
 # 저장소 클론
-git clone https://github.com/Laeyoung/seojae.git
+git clone https://github.com/VibeVista/seojae.git
 cd seojae
 
 # 가상 환경 생성

@@ -1,5 +1,11 @@
 # Seojae (서재)
 
+[![CI](https://github.com/VibeVista/seojae/actions/workflows/ci.yml/badge.svg)](https://github.com/VibeVista/seojae/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+
+[English](README.md) | **한국어**
+
 Seojae (서재)는 LLM 기반 지식 위키 프레임워크입니다. 원본 소스 — 아티클, 논문,
 영상, 노트 — 를 넣으면 LLM 코딩 도구가 자동으로 구조화된 교차 참조 위키를
 만들어줍니다.
@@ -68,7 +74,7 @@ LLM이 위키를 관리할 수 있습니다.
 
 ```bash
 # 1. 리포 클론
-git clone https://github.com/Laeyoung/seojae.git
+git clone https://github.com/VibeVista/seojae.git
 cd seojae
 
 # 2. LLM 도구로 열기 (규칙 파일을 자동으로 읽습니다)

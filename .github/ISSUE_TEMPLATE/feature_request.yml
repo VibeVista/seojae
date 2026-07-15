@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest a new workflow, extension, or improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: >
+        If this could be a Seojae extension (a .md file in extensions/),
+        mention that — extensions are the preferred way to add capabilities.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered

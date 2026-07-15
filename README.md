@@ -1,5 +1,11 @@
 # Seojae (서재)
 
+[![CI](https://github.com/VibeVista/seojae/actions/workflows/ci.yml/badge.svg)](https://github.com/VibeVista/seojae/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+
+**English** | [한국어](README.ko.md)
+
 Seojae is an LLM-powered knowledge wiki framework. Feed it raw sources — articles,
 papers, videos, notes — and your LLM coding tool automatically builds a structured,
 cross-referenced wiki.
@@ -68,7 +74,7 @@ your wiki from the moment you start a session.
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/Laeyoung/seojae.git
+git clone https://github.com/VibeVista/seojae.git
 cd seojae
 
 # 2. Open with your LLM tool (it auto-reads the rule file)

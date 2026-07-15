@@ -35,7 +35,7 @@ three have pre-configured rule files in the repo.
 ## 2. Clone and Open
 
 ```bash
-git clone https://github.com/Laeyoung/seojae.git
+git clone https://github.com/VibeVista/seojae.git
 cd seojae
 ```
 
