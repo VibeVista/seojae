@@ -156,6 +156,8 @@ venv/bin/python tools/search.py --reindex
 **내장 확장:**
 - `search-chromadb.md` — 시맨틱 검색 백엔드 (ChromaDB + sentence-transformers)
 - `obsidian.md` — Obsidian vault 연동
+- `connected-wikis.md` — 외부 seojae wiki를 토글 가능한 확장 지식 저장소로 연결
+  ([사용 가이드](docs/connected-wikis-guide.ko.md))
 
 직접 만들고 싶다면 [extensions/README.md](extensions/README.md)를 참고하세요.
 
