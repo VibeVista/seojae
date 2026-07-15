@@ -69,9 +69,26 @@ main 대비 신규 커밋 0 — 삭제해도 아무것도 잃지 않음. (자동
 
 ## 미완료 / 사용자 액션 필요
 
-- [ ] **PR #2 머지** — 자동 머지가 권한 정책(사람 승인 없는 self-merge 차단)으로 거부됨. 리뷰 요약은 PR 코멘트에 게시됨. 머지 후 `claude/connected-knowledge-base-mnMN7` 브랜치 삭제.
-- [ ] **PR #7 머지** — 문서-only. 머지 후 `add-landing-page` 브랜치 삭제.
+- [x] **PR #2 머지** — 사용자가 직접 머지 (da99f2b). 브랜치 삭제 완료.
+- [x] **PR #7 머지** — 사용자가 직접 머지 (b23f8af). 브랜치 삭제 완료.
 - [ ] (선택) `develop`, `ui-kit-template` 브랜치 삭제, 콘텐츠 브랜치 보관 방침 결정.
+
+## 실환경 E2E 검증 (머지 후 추가 진행)
+
+단위/통합 테스트 136개는 서브프로세스를 스텁으로 대체하므로, **실제 GitHub repo + 실제 임베딩 모델로 전체 플로우를 E2E 검증**했다. 테스트 픽스처로 [`Laeyoung/den`](https://github.com/Laeyoung/den) (커피 지식 샘플 위키, public)을 신규 생성. 실행은 scratchpad의 seojae 클론에서 수행해 본 저장소를 오염시키지 않음.
+
+**전부 통과** — 확인한 플로우:
+
+1. **connect (git)**: `https://github.com/Laeyoung/den` 실제 clone → README 프리뷰 → `PROMPT: consent` + exit 4 → `--decision consent=accept` 재호출로 resume → status ok, commit sha/모델 기록. `wiki/index.md`는 메타파일 제외 규칙으로 인덱싱에서 빠짐 (4 md → 3 pages).
+2. **connect (local)**: 로컬 경로 소스(`garden` 위키)도 정상 연결. `list`가 두 위키의 페이지 수/모델 정확히 표시.
+3. **멀티 컬렉션 검색**: `--collections wiki,wiki-ext-den,wiki-ext-garden` 병합 질의에서 "에스프레소 추출" → den 페이지 1위, "토마토 키우는 법" → garden 페이지 1위(0.72), 로컬 위키 결과와 점수순 병합. 오타 컬렉션은 경고 후 스킵 (get-only 수정 확인).
+4. **pull (증분)**: den에 `cold-brew.md` push → pull → 단건 증분 add → 즉시 검색됨, commit 추적 갱신.
+5. **pull (삭제)**: den에서 `grind-size.md` 삭제 push → pull → 삭제 감지 → 전체 reindex 폴백 → **검색 결과와 페이지 수에서 제거됨** (review-pass-3 핵심 수정의 실환경 확인).
+6. **toggle**: enabled 플립 + `config: toggle den` 자동 커밋.
+7. **disconnect**: 로컬 페이지가 `(출처: den)`으로 인용 중일 때 참조 1건 감지 → `PROMPT: disconnect-grep` + exit 4 → `--decision disconnect-grep=proceed`로 진행. 정리 완료: config 비움, clone 디렉토리 삭제, ChromaDB 컬렉션 삭제 (질의 시 not-found 경고).
+8. **자동 커밋 규약**: `connect:` / `pull: N wikis updated` / `config: toggle` / `disconnect:` 커밋이 스키마 규약대로 생성됨.
+
+`Laeyoung/den` repo는 향후 회귀 테스트 픽스처로 유지.
 
 ## 리뷰 방법론 메모 (다음에 참고)
 
