@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 import argparse
 import re
 import sys
 from pathlib import Path
 
-import chromadb
 import yaml
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # chromadb import is deferred to runtime (heavy; skipped by --print-model/--help)
+    import chromadb
 
 
 # --- Constants ---
@@ -79,11 +85,29 @@ def build_embedding_text(fm: dict, body: str) -> str:
 
 def get_collection(index_path: str = INDEX_PATH, name: str = COLLECTION_NAME) -> chromadb.Collection:
     """Get or create the named ChromaDB collection with cosine similarity metric."""
+    import chromadb
     client = chromadb.PersistentClient(path=index_path)
     return client.get_or_create_collection(
         name=name,
         metadata={"hnsw:space": "cosine"},
     )
+
+
+def get_existing_collections(index_path: str, names: list[str]) -> list[chromadb.Collection]:
+    """Return only collections that already exist; warn to stderr and skip missing ones.
+
+    Query must not get_or_create: a typo'd --collections name would otherwise
+    silently persist an empty collection and mask the misconfiguration.
+    """
+    import chromadb
+    client = chromadb.PersistentClient(path=index_path)
+    out = []
+    for n in names:
+        try:
+            out.append(client.get_collection(n))
+        except Exception:
+            print(f"Warning: collection '{n}' not found, skipping", file=sys.stderr)
+    return out
 
 
 # 외부 wiki 인덱싱 시 제외할 파일/디렉토리 (B 섹션 인덱싱 범위 규칙)
@@ -151,6 +175,7 @@ def reindex(wiki_path: str, index_path: str, model, name: str = COLLECTION_NAME)
     Deletes and recreates the ChromaDB collection to guarantee a clean slate
     (avoids the collection.get() pagination limits that could leave stale IDs).
     """
+    import chromadb
     client = chromadb.PersistentClient(path=index_path)
     try:
         client.delete_collection(name)
@@ -273,6 +298,9 @@ def main() -> None:
                         help="Collection name for --add/--reindex (default: wiki)")
     parser.add_argument("--collections", default=None, metavar="LIST",
                         help="Comma-separated collection names for --query (default: wiki only)")
+    parser.add_argument("--wiki-root", default=None, metavar="PATH",
+                        help="Wiki root for --add: metafiles/nested connected-wikis under it are skipped "
+                             "(same exclusion rules as --reindex)")
     args = parser.parse_args()
 
     index_path = args.index_path
@@ -298,7 +326,7 @@ def main() -> None:
 
         if args.collections:
             names = [n.strip() for n in args.collections.split(",") if n.strip()]
-            cols = [get_collection(index_path, name=n) for n in names]
+            cols = get_existing_collections(index_path, names)
             results = query_indexes(args.query, args.top, cols, model)
             for path, score, coll_name in results:
                 print(f"{path} [wiki: {coll_name}] [score: {score:.2f}]")
@@ -314,7 +342,7 @@ def main() -> None:
         model = SentenceTransformer(MODEL_NAME)
         collection = get_collection(index_path, name=args.collection)
         try:
-            add_page(args.add, collection, model)
+            add_page(args.add, collection, model, wiki_root=args.wiki_root)
         except FileNotFoundError as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)

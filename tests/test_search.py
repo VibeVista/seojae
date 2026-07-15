@@ -568,3 +568,35 @@ def test_cli_query_single_collection_format_unchanged(tmp_path):
     line = result.stdout.strip().split("\n")[0]
     assert "[wiki:" not in line
     assert "[score:" in line
+
+
+# --- Review pass 3 ---
+
+def test_query_indexes_mixed_empty_and_populated(tmp_path):
+    """An empty collection mixed with a populated one must be skipped, not raise."""
+    from tools.search import query_indexes
+    client = chromadb.PersistentClient(path=str(tmp_path / "index"))
+    populated = client.get_or_create_collection("wiki", metadata={"hnsw:space": "cosine"})
+    empty = client.get_or_create_collection("wiki-ext-empty", metadata={"hnsw:space": "cosine"})
+    populated.upsert(ids=["a.md"], embeddings=[[0.1] * 384],
+                     documents=["d"], metadatas=[{"path": "a.md"}])
+
+    results = query_indexes("q", 5, [populated, empty], _mock_model())
+    assert len(results) == 1
+    assert results[0][0] == "a.md"
+    assert results[0][2] == "wiki"
+
+
+def test_get_existing_collections_skips_missing(tmp_path, capsys):
+    """--collections must never get_or_create: missing names are warned and skipped."""
+    from tools.search import get_existing_collections
+    index = str(tmp_path / "index")
+    client = chromadb.PersistentClient(path=index)
+    client.get_or_create_collection("wiki", metadata={"hnsw:space": "cosine"})
+
+    cols = get_existing_collections(index, ["wiki", "wiki-ext-typo"])
+    assert [c.name for c in cols] == ["wiki"]
+    assert "wiki-ext-typo" in capsys.readouterr().err
+    # The missing collection must NOT have been created as a side effect.
+    names = {c.name for c in client.list_collections()}
+    assert "wiki-ext-typo" not in names

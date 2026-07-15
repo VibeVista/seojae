@@ -606,7 +606,7 @@ def test_disconnect_does_not_disturb_in_flight_pull(tmp_path, monkeypatch):
     pull_done = threading.Event()
     add_calls: list[str] = []
 
-    def _slow_add(f, c):
+    def _slow_add(f, c, wiki_root=None):
         time.sleep(0.3)
         add_calls.append(str(f))
 
@@ -646,7 +646,7 @@ def test_pull_git_partial_reindex_on_diff(tmp_path, monkeypatch):
 
     add_calls: list[tuple[str, str]] = []
 
-    def _fake_add_page(file, coll):
+    def _fake_add_page(file, coll, wiki_root=None):
         add_calls.append((str(file), coll))
 
         class R:
@@ -724,7 +724,7 @@ def test_pull_local_mtime_based(tmp_path, monkeypatch):
 
     add_calls: list[str] = []
 
-    def _stub_add(f, c):
+    def _stub_add(f, c, wiki_root=None):
         add_calls.append(str(f))
 
         class R:
@@ -757,7 +757,7 @@ def test_pull_partial_failure_summary(tmp_path, monkeypatch, capsys):
          "last_pulled": "2026-04-29"}
     ]})
 
-    def _stub_add(f, c):
+    def _stub_add(f, c, wiki_root=None):
         class R:
             returncode = 0
             stdout = ""
@@ -1047,7 +1047,7 @@ def test_pull_subprocess_failure_is_logged(tmp_path, monkeypatch, capsys):
          "last_pulled": "2026-01-01"}
     ]})
 
-    def _failing_add(f, c):
+    def _failing_add(f, c, wiki_root=None):
         class R:
             returncode = 1
             stdout = ""
@@ -1198,3 +1198,415 @@ def test_pull_does_not_clobber_concurrent_toggle(tmp_path, monkeypatch):
     # Pull's own mutations should also be present on both
     assert by_id["a"]["status"] == "ok"
     assert by_id["b"]["status"] == "ok"
+
+
+# --- Review pass 3 ---
+
+def test_load_config_rejects_invalid_id(tmp_path):
+    from tools.connected_wikis import ConfigCorrupt
+    p = tmp_path / "connected-wikis.json"
+    p.write_text(json.dumps({"schema_version": 1, "wikis": [
+        {"id": "../evil", "name": "E", "source_type": "local", "source": "/x",
+         "enabled": True, "status": "ok", "added": "2026-04-29",
+         "embedding_backend": None, "embedding_model": None}
+    ]}), encoding="utf-8")
+    with pytest.raises(ConfigCorrupt):
+        load_config(p)
+
+
+def test_load_config_rejects_non_dict_entry(tmp_path):
+    from tools.connected_wikis import ConfigCorrupt
+    p = tmp_path / "connected-wikis.json"
+    p.write_text(json.dumps({"schema_version": 1, "wikis": ["not-a-dict"]}),
+                 encoding="utf-8")
+    with pytest.raises(ConfigCorrupt):
+        load_config(p)
+
+
+def test_git_commit_pathspec_ignores_unrelated_staged_files(tmp_path, monkeypatch):
+    """_git_commit must never sweep user-staged files into automated commits."""
+    from tools import connected_wikis as cw
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "t@t"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=repo, check=True, capture_output=True)
+    (repo / "base.txt").write_text("base", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "base"], cwd=repo, check=True, capture_output=True)
+
+    (repo / "connected-wikis.json").write_text("{}", encoding="utf-8")
+    (repo / "log.md").write_text("# log", encoding="utf-8")
+    (repo / "unrelated.txt").write_text("user work in progress", encoding="utf-8")
+    subprocess.run(["git", "add", "unrelated.txt"], cwd=repo, check=True, capture_output=True)
+
+    monkeypatch.setattr(cw, "_REPO_ROOT", repo)
+    cw._git_commit("connect: test")
+
+    shown = subprocess.run(["git", "show", "--name-only", "--format=%s", "HEAD"],
+                           cwd=repo, capture_output=True, text=True).stdout
+    assert "connect: test" in shown
+    assert "connected-wikis.json" in shown
+    assert "unrelated.txt" not in shown
+
+
+def _connect_git_fixture(tmp_path, monkeypatch, wiki_id="g"):
+    """Connect a fake git remote and return (cw, remote, add_calls, reindex_calls)."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    remote = _make_fake_remote(tmp_path)
+    _stub_resolve_model(cw, monkeypatch, model="model-v1")
+
+    add_calls: list[str] = []
+    reindex_calls: list[str] = []
+
+    def _fake_add_page(f, c, wiki_root=None):
+        add_calls.append(str(f))
+
+        class R:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        return R()
+
+    def _fake_reindex(wp, coll):
+        import chromadb as _ch
+        client = _ch.PersistentClient(path=cw.INDEX_PATH)
+        client.get_or_create_collection(coll, metadata={"hnsw:space": "cosine"})
+        reindex_calls.append(str(wp))
+
+        class R:
+            returncode = 0
+            stdout = "Reindex complete: 1 pages indexed, 0 skipped"
+            stderr = ""
+        return R()
+
+    monkeypatch.setattr(cw, "_run_add_page", _fake_add_page)
+    monkeypatch.setattr(cw, "_run_reindex", _fake_reindex)
+    rc = cw.cmd_connect(source=str(remote), wiki_id=wiki_id, name=None,
+                        source_type="git", decisions={"consent": "accept"})
+    assert rc == 0
+    add_calls.clear()
+    reindex_calls.clear()
+    return cw, remote, add_calls, reindex_calls
+
+
+def test_pull_git_reindex_on_deletion(tmp_path, monkeypatch):
+    """Upstream deletions must trigger a full reindex — incremental --add can't remove."""
+    cw, remote, add_calls, reindex_calls = _connect_git_fixture(tmp_path, monkeypatch)
+
+    subprocess.run(["git", "rm", "wiki/p.md"], cwd=remote, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "delete page"], cwd=remote, check=True, capture_output=True)
+
+    rc = cw.cmd_pull(decisions={})
+    assert rc == 0
+    assert len(reindex_calls) == 1
+    assert add_calls == []
+
+
+def test_pull_git_reindex_on_rename(tmp_path, monkeypatch):
+    """A rename removes the old path — must also take the reindex path."""
+    cw, remote, add_calls, reindex_calls = _connect_git_fixture(tmp_path, monkeypatch)
+
+    subprocess.run(["git", "mv", "wiki/p.md", "wiki/renamed.md"],
+                   cwd=remote, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "rename page"], cwd=remote, check=True, capture_output=True)
+
+    rc = cw.cmd_pull(decisions={})
+    assert rc == 0
+    assert len(reindex_calls) == 1
+    assert add_calls == []
+
+
+def test_pull_git_reindex_when_many_changes(tmp_path, monkeypatch):
+    """Above _INCREMENTAL_ADD_LIMIT changed files, one reindex beats N model loads."""
+    cw, remote, add_calls, reindex_calls = _connect_git_fixture(tmp_path, monkeypatch)
+
+    for i in range(cw._INCREMENTAL_ADD_LIMIT + 1):
+        (remote / "wiki" / f"bulk{i}.md").write_text(
+            f"---\ntitle: B{i}\ntags: []\n---\nbody", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=remote, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "bulk add"], cwd=remote, check=True, capture_output=True)
+
+    rc = cw.cmd_pull(decisions={})
+    assert rc == 0
+    assert len(reindex_calls) == 1
+    assert add_calls == []
+
+
+def test_pull_git_reindex_when_no_stored_commit(tmp_path, monkeypatch):
+    """A config entry with no stored commit has no diff base — full reindex."""
+    cw, remote, add_calls, reindex_calls = _connect_git_fixture(tmp_path, monkeypatch)
+
+    cfg = cw.load_config(cw.CONFIG_PATH)
+    cfg["wikis"][0].pop("commit", None)
+    save_config(cw.CONFIG_PATH, cfg)
+
+    rc = cw.cmd_pull(decisions={})
+    assert rc == 0
+    assert len(reindex_calls) == 1
+    assert add_calls == []
+
+
+def test_pull_git_incremental_add_passes_wiki_root(tmp_path, monkeypatch):
+    """Incremental adds must carry wiki_root so metafile exclusion matches reindex."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    remote = _make_fake_remote(tmp_path)
+    _stub_resolve_model(cw, monkeypatch, model="model-v1")
+
+    roots: list[str] = []
+
+    def _fake_add_page(f, c, wiki_root=None):
+        roots.append(wiki_root)
+
+        class R:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        return R()
+
+    monkeypatch.setattr(cw, "_run_add_page", _fake_add_page)
+    monkeypatch.setattr(cw, "_run_reindex", _make_fake_reindex_factory(cw))
+    rc = cw.cmd_connect(source=str(remote), wiki_id="g", name=None,
+                        source_type="git", decisions={"consent": "accept"})
+    assert rc == 0
+
+    (remote / "wiki" / "new.md").write_text("---\ntitle: N\ntags: []\n---\nx", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=remote, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "new"], cwd=remote, check=True, capture_output=True)
+
+    roots.clear()
+    rc = cw.cmd_pull(decisions={})
+    assert rc == 0
+    assert len(roots) == 1
+    assert roots[0] is not None and roots[0].endswith("wiki")
+
+
+def test_pull_local_reindex_when_indexed_file_missing(tmp_path, monkeypatch):
+    """Stale indexed entries (source file gone) must force a local reindex."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    src = tmp_path / "loc"
+    (src / "wiki").mkdir(parents=True)
+    (src / "wiki" / "keep.md").write_text("---\ntitle: K\ntags: []\n---\nk", encoding="utf-8")
+    save_config(cw.CONFIG_PATH, {"schema_version": 1, "wikis": [
+        {"id": "loc", "name": "L", "source_type": "local", "source": str(src),
+         "enabled": True, "status": "ok", "added": "2026-04-29",
+         "embedding_backend": "search-chromadb", "embedding_model": "m",
+         "last_pulled": "2026-01-01"}
+    ]})
+
+    monkeypatch.setattr(cw, "_indexed_files_missing", lambda ip, c: True)
+    add_calls: list[str] = []
+    reindex_calls: list[str] = []
+
+    def _stub_add(f, c, wiki_root=None):
+        add_calls.append(str(f))
+
+        class R:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        return R()
+
+    def _stub_reindex(wp, coll):
+        reindex_calls.append(str(wp))
+
+        class R:
+            returncode = 0
+            stdout = "Reindex complete: 1 pages indexed, 0 skipped"
+            stderr = ""
+        return R()
+
+    monkeypatch.setattr(cw, "_run_add_page", _stub_add)
+    monkeypatch.setattr(cw, "_run_reindex", _stub_reindex)
+
+    rc = cw.cmd_pull(decisions={})
+    assert rc == 0
+    assert len(reindex_calls) == 1
+    assert add_calls == []
+
+
+def test_indexed_files_missing_detects_stale(tmp_path, monkeypatch):
+    from tools import connected_wikis as cw
+    import chromadb as _ch
+    index = str(tmp_path / "idx")
+    client = _ch.PersistentClient(path=index)
+    coll = client.get_or_create_collection("wiki-ext-t", metadata={"hnsw:space": "cosine"})
+
+    existing = tmp_path / "real.md"
+    existing.write_text("x", encoding="utf-8")
+    coll.upsert(ids=[str(existing)], embeddings=[[0.1] * 384],
+                documents=["d"], metadatas=[{"path": str(existing)}])
+    assert cw._indexed_files_missing(index, "wiki-ext-t") is False
+
+    coll.upsert(ids=[str(tmp_path / "gone.md")], embeddings=[[0.2] * 384],
+                documents=["d"], metadatas=[{"path": "gone"}])
+    assert cw._indexed_files_missing(index, "wiki-ext-t") is True
+    # Missing collection → False (no signal)
+    assert cw._indexed_files_missing(index, "no-such-collection") is False
+
+
+def test_pull_mismatch_reindex_decision(tmp_path, monkeypatch):
+    """decision=reindex must reindex once, update embedding fields, and skip per-file adds."""
+    cw, remote, add_calls, reindex_calls = _connect_git_fixture(tmp_path, monkeypatch)
+
+    # Recorded model differs from active model → mismatch prompt fires.
+    cfg = cw.load_config(cw.CONFIG_PATH)
+    cfg["wikis"][0]["embedding_model"] = "old-model"
+    save_config(cw.CONFIG_PATH, cfg)
+
+    (remote / "wiki" / "new.md").write_text("---\ntitle: N\ntags: []\n---\nx", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=remote, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "new"], cwd=remote, check=True, capture_output=True)
+
+    rc = cw.cmd_pull(decisions={"mismatch": "reindex"})
+    assert rc == 0
+    assert len(reindex_calls) == 1  # full reindex, not per-file adds
+    assert add_calls == []
+    cfg = cw.load_config(cw.CONFIG_PATH)
+    assert cfg["wikis"][0]["embedding_model"] == "model-v1"
+
+
+def test_connect_symlink_wiki_rejected(tmp_path, monkeypatch):
+    """A cloned repo whose wiki/ is a symlink must be refused (local file indexing)."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+
+    outside = tmp_path / "outside-wiki"
+    outside.mkdir()
+    (outside / "leak.md").write_text("---\ntitle: L\ntags: []\n---\nsecret", encoding="utf-8")
+
+    repo = tmp_path / "evil-remote"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "t@t"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=repo, check=True, capture_output=True)
+    os.symlink(str(outside), str(repo / "wiki"))
+    (repo / "README.md").write_text("innocent", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "evil"], cwd=repo, check=True, capture_output=True)
+
+    _stub_resolve_model(cw, monkeypatch)
+    rc = cw.cmd_connect(source=str(repo), wiki_id="evil", name=None,
+                        source_type="git", decisions={"consent": "accept"})
+    assert rc == 1
+    assert cw.load_config(cw.CONFIG_PATH)["wikis"] == []
+
+
+def test_safe_preview_rejects_symlinked_readme(tmp_path):
+    from tools.connected_wikis import _safe_preview
+    secret = tmp_path / "secret.txt"
+    secret.write_text("do not leak", encoding="utf-8")
+    root = tmp_path / "src"
+    (root / "wiki").mkdir(parents=True)
+    os.symlink(str(secret), str(root / "README.md"))
+
+    name, preview = _safe_preview(root, root / "wiki")
+    assert "do not leak" not in preview
+
+
+def test_safe_preview_strips_control_chars(tmp_path):
+    from tools.connected_wikis import _safe_preview
+    root = tmp_path / "src"
+    (root / "wiki").mkdir(parents=True)
+    (root / "README.md").write_text("hi\x1b[31mred\x07bell\nnew line\ttab", encoding="utf-8")
+
+    name, preview = _safe_preview(root, root / "wiki")
+    assert name == "README.md"
+    assert "\x1b" not in preview and "\x07" not in preview
+    assert "\n" in preview and "\t" in preview  # legitimate whitespace kept
+
+
+def test_safe_preview_reads_at_most_2000_chars(tmp_path):
+    from tools.connected_wikis import _safe_preview
+    root = tmp_path / "src"
+    (root / "wiki").mkdir(parents=True)
+    (root / "README.md").write_text("A" * 10000, encoding="utf-8")
+    _, preview = _safe_preview(root, root / "wiki")
+    assert len(preview) == 2000
+
+
+@pytest.mark.parametrize("source,expected", [
+    ("https://github.com/a/b.git", "git"),
+    ("http://example.com/a/b", "git"),
+    ("git@github.com:a/b.git", "git"),
+    ("ssh://git@host/a/b.git", "git"),
+    ("git://host/a/b.git", "git"),
+    ("/local/path/to/wiki", "local"),
+    ("relative/path", "local"),
+])
+def test_infer_source_type(source, expected):
+    from tools.connected_wikis import _infer_source_type
+    assert _infer_source_type(source) == expected
+
+
+def test_connect_git_option_injection_guarded(tmp_path, monkeypatch):
+    """A source starting with -- must be treated as a path, never a git option."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    _stub_resolve_model(cw, monkeypatch)
+    sentinel = tmp_path / "pwned"
+
+    rc = cw.cmd_connect(source=f"--upload-pack=touch {sentinel}", wiki_id="evil",
+                        name=None, source_type="git", decisions={"consent": "accept"})
+    assert rc == 1
+    assert not sentinel.exists()
+    assert cw.load_config(cw.CONFIG_PATH)["wikis"] == []
+
+
+def test_grep_references_all_patterns(tmp_path, monkeypatch):
+    """All three citation forms (Korean, English, path) must be detected."""
+    cw = _setup_repo(tmp_path, monkeypatch)
+    syn = tmp_path / "wiki" / "synthesis"
+    syn.mkdir(parents=True)
+    (syn / "a.md").write_text("주장 (출처: eng)", encoding="utf-8")
+    (syn / "b.md").write_text("claim (source: eng)", encoding="utf-8")
+    (syn / "c.md").write_text("see connected-wikis/eng/wiki/p.md", encoding="utf-8")
+    (syn / "d.md").write_text("unrelated (source: other)", encoding="utf-8")
+
+    refs = cw._grep_references("eng")
+    assert len(refs) == 3
+    files = {r[0] for r in refs}
+    assert files == {"wiki/synthesis/a.md", "wiki/synthesis/b.md", "wiki/synthesis/c.md"}
+
+
+def test_request_decision_tty_eof_falls_through(monkeypatch, capsys):
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+
+    def _eof(prompt):
+        raise EOFError
+    monkeypatch.setattr("builtins.input", _eof)
+
+    with pytest.raises(SystemExit) as exc:
+        request_decision(prompt_key="consent", question="Trust?",
+                         options=["accept", "reject"], decisions={})
+    assert exc.value.code == 4
+    assert "PROMPT: consent" in capsys.readouterr().out
+
+
+def test_request_decision_tty_invalid_then_valid(monkeypatch):
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    answers = iter(["bogus", "accept"])
+    monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
+
+    assert request_decision(prompt_key="consent", question="Trust?",
+                            options=["accept", "reject"], decisions={}) == "accept"
+
+
+def test_validate_id_empty_string():
+    with pytest.raises(IdError):
+        validate_id("", [])
+
+
+def test_connect_warns_on_credentialed_url(tmp_path, monkeypatch, capsys):
+    cw = _setup_repo(tmp_path, monkeypatch)
+    cw.cmd_init()
+    _stub_resolve_model(cw, monkeypatch)
+
+    rc = cw.cmd_connect(source="https://user:token@example.invalid/a/b.git",
+                        wiki_id="cred", name=None, source_type="git",
+                        decisions={"consent": "accept"})
+    assert rc == 1  # clone fails (invalid host) — the warning must fire regardless
+    assert "credentials" in capsys.readouterr().err

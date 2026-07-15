@@ -16,6 +16,7 @@ import subprocess
 import sys
 from datetime import date, datetime
 from pathlib import Path
+from urllib.parse import urlsplit
 
 CONFIG_VERSION = 1
 DEFAULT_CONFIG: dict = {"schema_version": CONFIG_VERSION, "wikis": []}
@@ -31,6 +32,20 @@ EXIT_DECISION_PENDING = 4
 
 _ID_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,29}[a-z0-9])?$")
 _RESERVED_IDS = frozenset({"wiki", "local", "ext", "default"})
+
+# Above this many changed files, incremental per-file --add (one subprocess +
+# full model load each) costs more than a single full reindex.
+_INCREMENTAL_ADD_LIMIT = 10
+
+# Strip terminal control sequences from external previews (keep \t and \n) —
+# a malicious README could otherwise manipulate the terminal at the
+# trust-decision moment via ANSI escapes.
+_CTRL_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
+
+
+def _ext_collection_name(wiki_id: str) -> str:
+    """ChromaDB collection name for an external wiki (single source of truth)."""
+    return f"wiki-ext-{wiki_id}"
 
 
 # --- Errors ---
@@ -91,8 +106,20 @@ def load_config(path: Path) -> dict:
         )
 
     for w in cfg["wikis"]:
-        if isinstance(w, dict):
-            _backfill_wiki(w)
+        if not isinstance(w, dict):
+            raise ConfigCorrupt(
+                f"{path} wiki entry is {type(w).__name__}, expected object."
+            )
+        wid = w.get("id")
+        # Ids are used verbatim in filesystem paths (connected-wikis/<id>,
+        # lock files, shutil.rmtree on disconnect) — validate on every load
+        # so a hand-edited/synced config can't smuggle in path traversal.
+        if not isinstance(wid, str) or not _ID_RE.match(wid) or "--" in wid:
+            raise ConfigCorrupt(
+                f"{path} contains invalid wiki id {wid!r}; "
+                f"fix or remove the entry (ids: lowercase alphanumeric + inner hyphens)."
+            )
+        _backfill_wiki(w)
     return cfg
 
 
@@ -253,13 +280,17 @@ def _run_reindex(wiki_path: str, collection: str):
     )
 
 
-def _run_add_page(filepath: str, collection: str):
-    """Run tools/search.py --add <file> --collection <coll>. Override-able for tests."""
-    return subprocess.run(
-        [sys.executable, str(_REPO_ROOT / "tools" / "search.py"),
-         "--add", filepath, "--collection", collection],
-        capture_output=True, text=True,
-    )
+def _run_add_page(filepath: str, collection: str, wiki_root: str | None = None):
+    """Run tools/search.py --add <file> --collection <coll>. Override-able for tests.
+
+    wiki_root applies the same metafile/nested-wiki exclusion rules as reindex,
+    keeping the incremental path consistent with the full-rebuild path.
+    """
+    cmd = [sys.executable, str(_REPO_ROOT / "tools" / "search.py"),
+           "--add", filepath, "--collection", collection]
+    if wiki_root:
+        cmd += ["--wiki-root", wiki_root]
+    return subprocess.run(cmd, capture_output=True, text=True)
 
 
 def _delete_collection(name: str) -> None:
@@ -294,6 +325,32 @@ def _collection_count(index_path: str, collection_name: str) -> int | None:
         gc.collect()
 
 
+def _indexed_files_missing(index_path: str, collection_name: str) -> bool:
+    """True if any indexed doc's source file no longer exists (stale entries).
+
+    Doc IDs are repo-relative for paths under the repo (git clones) and
+    absolute for external local-source wikis — mirror add_page()'s ID scheme.
+    """
+    import chromadb
+    import gc
+    client = None
+    try:
+        client = chromadb.PersistentClient(path=index_path)
+        ids = client.get_collection(collection_name).get(include=[])["ids"]
+    except Exception:
+        return False
+    finally:
+        del client
+        gc.collect()
+    for doc_id in ids:
+        p = Path(doc_id)
+        if not p.is_absolute():
+            p = _REPO_ROOT / doc_id
+        if not p.exists():
+            return True
+    return False
+
+
 def _detect_default_branch(repo_dir: Path) -> str:
     """Detect via `git symbolic-ref refs/remotes/origin/HEAD`. Falls back to `main`."""
     for attempt in range(2):
@@ -323,15 +380,52 @@ def _append_log(line: str) -> None:
         f.write(f"\n## [{date.today().isoformat()}] {line}\n")
 
 
+_GIT_COMMIT_PATHS = ("connected-wikis.json", "log.md", ".gitignore")
+
+
 def _git_commit(message: str) -> None:
-    """Stage tracked changes and commit. Best-effort — silent on failure."""
+    """Stage and commit ONLY this tool's files. Best-effort — silent on failure.
+
+    The commit is pathspec-scoped so anything the user (or a concurrent agent)
+    happens to have staged is never swept into an automated commit.
+    """
+    # A pathspec that matches nothing makes git add/commit fail wholesale, so
+    # only include files that actually exist.
+    paths = [p for p in _GIT_COMMIT_PATHS if (_REPO_ROOT / p).exists()]
+    if not paths:
+        return
     try:
-        subprocess.run(["git", "add", "connected-wikis.json", "log.md", ".gitignore"],
+        subprocess.run(["git", "add", "--", *paths],
                        cwd=str(_REPO_ROOT), capture_output=True, check=False)
-        subprocess.run(["git", "commit", "-m", message],
+        subprocess.run(["git", "commit", "-m", message, "--", *paths],
                        cwd=str(_REPO_ROOT), capture_output=True, check=False)
     except FileNotFoundError:
         pass
+
+
+def _safe_preview(readme_root: Path, wiki_subdir: Path) -> tuple[str, str]:
+    """Pick README.md (root) or index.md (wiki/) and return (name, sanitized head).
+
+    Symlinks and paths escaping the source tree are rejected — a malicious wiki
+    could otherwise point README.md at local files and leak them into the
+    pre-consent preview. Reads at most 2000 chars and strips control sequences.
+    """
+    for cand, root in ((readme_root / "README.md", readme_root),
+                       (wiki_subdir / "index.md", wiki_subdir)):
+        if not cand.exists():
+            continue
+        try:
+            if cand.is_symlink() or not cand.resolve().is_relative_to(root.resolve()):
+                continue
+        except OSError:
+            continue
+        try:
+            with cand.open("r", encoding="utf-8", errors="replace") as f:
+                text = f.read(2000)
+        except OSError as e:
+            return ("preview", f"(unreadable: {e})")
+        return (cand.name, _CTRL_RE.sub("", text))
+    return ("preview", "(no README/index.md)")
 
 
 def _infer_source_type(source: str) -> str:
@@ -408,7 +502,9 @@ def cmd_init() -> int:
 
 
 def cmd_list() -> int:
-    cmd_init()
+    rc = cmd_init()
+    if rc != 0:
+        return rc
 
     cfg = load_config(CONFIG_PATH)
     wikis = cfg["wikis"]
@@ -424,7 +520,7 @@ def cmd_list() -> int:
     print("| " + " | ".join(cols) + " |")
     print("|" + "|".join(["---"] * len(cols)) + "|")
     for w in wikis:
-        count = _collection_count(INDEX_PATH, f"wiki-ext-{w['id']}")
+        count = _collection_count(INDEX_PATH, _ext_collection_name(w["id"]))
         pages = "N/A" if count is None else str(count)
         row = [
             w["id"],
@@ -452,7 +548,9 @@ def _print_help_examples() -> None:
 
 
 def cmd_toggle(wiki_id: str, state: str) -> int:
-    cmd_init()
+    rc = cmd_init()
+    if rc != 0:
+        return rc
     with with_global_lock(GLOBAL_LOCK):
         cfg = load_config(CONFIG_PATH)
         for w in cfg["wikis"]:
@@ -486,22 +584,32 @@ def _rollback_connect(wiki_id: str, coll_name: str, clone_dir: Path, source_type
             save_config(CONFIG_PATH, cfg)
     except Exception as e:
         print(f"Rollback: JSON cleanup failed: {e}", file=sys.stderr)
-    try:
-        (LOCK_DIR / f"{wiki_id}.lock").unlink(missing_ok=True)
-    except Exception:
-        pass
+    # Lock files are intentionally NOT unlinked: removing the path while
+    # another process holds an fd-level flock would let a third process
+    # create a fresh inode at the same path and bypass the lock. Stale
+    # 0-byte lock files in the gitignored .locks/ dir are harmless.
 
 
 def cmd_connect(source: str, wiki_id: str, name: str | None,
                 source_type: str | None, decisions: dict[str, str]) -> int:
-    cmd_init()
+    rc = cmd_init()
+    if rc != 0:
+        return rc
 
     if source_type is None:
         source_type = _infer_source_type(source)
     if name is None:
         name = _infer_name(source, source_type)
+
+    if source_type == "git":
+        parts = urlsplit(source)
+        if parts.scheme in ("http", "https") and "@" in parts.netloc:
+            print("Warning: source URL embeds credentials; they will be stored "
+                  "verbatim in connected-wikis.json (git-committed). "
+                  "Prefer a git credential helper.", file=sys.stderr)
+
     today = date.today().isoformat()
-    coll_name = f"wiki-ext-{wiki_id}"
+    coll_name = _ext_collection_name(wiki_id)
     clone_dir = CONNECTED_DIR / wiki_id
 
     # Resume-on-re-invocation: a prior call that exited via DecisionPending
@@ -555,14 +663,23 @@ def cmd_connect(source: str, wiki_id: str, name: str | None,
             else:
                 clone_dir.parent.mkdir(parents=True, exist_ok=True)
                 # `--` prevents `source` strings starting with `--` from being
-                # parsed as git options (e.g., --upload-pack=evil-cmd).
-                r = subprocess.run(["git", "clone", "--", source, str(clone_dir)],
+                # parsed as git options (e.g., --upload-pack=evil-cmd);
+                # protocol.ext.allow=never blocks `ext::sh -c ...` transport RCE.
+                r = subprocess.run(["git", "-c", "protocol.ext.allow=never",
+                                    "clone", "--", source, str(clone_dir)],
                                    capture_output=True, text=True)
                 if r.returncode != 0:
                     _rollback_connect(wiki_id, coll_name, clone_dir, source_type)
                     print(f"Error: git clone failed: {r.stderr}", file=sys.stderr)
                     return 1
                 wiki_subdir = clone_dir / "wiki"
+            if wiki_subdir.is_symlink():
+                # A malicious repo could point wiki/ at a local directory and
+                # get arbitrary local .md files indexed/previewed.
+                _rollback_connect(wiki_id, coll_name, clone_dir, source_type)
+                print("Error: cloned wiki/ is a symlink — refusing to index",
+                      file=sys.stderr)
+                return 1
         else:
             if not Path(source).exists():
                 _rollback_connect(wiki_id, coll_name, clone_dir, source_type)
@@ -576,11 +693,8 @@ def cmd_connect(source: str, wiki_id: str, name: str | None,
             return 1
 
         readme_root = clone_dir if source_type == "git" else Path(source)
-        readme = (readme_root / "README.md") if (readme_root / "README.md").exists() \
-                 else (wiki_subdir / "index.md") if (wiki_subdir / "index.md").exists() \
-                 else None
-        readme_preview = readme.read_text(encoding="utf-8")[:2000] if readme else "(no README/index.md)"
-        print(f"--- {readme.name if readme else 'preview'} ---\n{readme_preview}\n--- end ---")
+        preview_name, readme_preview = _safe_preview(readme_root, wiki_subdir)
+        print(f"--- {preview_name} ---\n{readme_preview}\n--- end ---")
         decision = request_decision(
             prompt_key="consent",
             question=f"Trust external wiki '{wiki_id}' content? It will be indexed as data, not executed.",
@@ -631,7 +745,9 @@ def cmd_connect(source: str, wiki_id: str, name: str | None,
 
 
 def cmd_disconnect(wiki_id: str, decisions: dict[str, str]) -> int:
-    cmd_init()
+    rc = cmd_init()
+    if rc != 0:
+        return rc
     cfg = load_config(CONFIG_PATH)
     if not any(w["id"] == wiki_id for w in cfg["wikis"]):
         print(f"Warning: wiki '{wiki_id}' not found, no-op", file=sys.stderr)
@@ -668,10 +784,10 @@ def cmd_disconnect(wiki_id: str, decisions: dict[str, str]) -> int:
         # Failures here would orphan files but the user has no JSON handle to retry,
         # so log loudly and proceed.
         try:
-            _delete_collection(f"wiki-ext-{wiki_id}")
+            _delete_collection(_ext_collection_name(wiki_id))
         except Exception as e:
-            print(f"Warning: could not delete collection 'wiki-ext-{wiki_id}': {e}",
-                  file=sys.stderr)
+            print(f"Warning: could not delete collection "
+                  f"'{_ext_collection_name(wiki_id)}': {e}", file=sys.stderr)
 
         clone_dir = CONNECTED_DIR / wiki_id
         if clone_dir.exists():
@@ -685,16 +801,14 @@ def cmd_disconnect(wiki_id: str, decisions: dict[str, str]) -> int:
         print(f"Disconnected: {wiki_id}")
         return 0
     finally:
+        # Lock file is NOT unlinked (see _rollback_connect for rationale).
         release_per_wiki_lock(lock_fd)
-        try:
-            (LOCK_DIR / f"{wiki_id}.lock").unlink(missing_ok=True)
-        except Exception:
-            pass
 
 
-def _checked_add_page(filepath: str, collection: str, wiki_id: str) -> None:
+def _checked_add_page(filepath: str, collection: str, wiki_id: str,
+                      wiki_root: str | None = None) -> None:
     """Run _run_add_page and log non-zero exit to stderr (best-effort)."""
-    r = _run_add_page(filepath, collection)
+    r = _run_add_page(filepath, collection, wiki_root)
     if r.returncode != 0:
         print(f"Warning: add_page failed for {wiki_id}:{filepath}: {r.stderr.strip()}",
               file=sys.stderr)
@@ -708,6 +822,48 @@ def _checked_reindex(wiki_path: str, collection: str, wiki_id: str) -> None:
               file=sys.stderr)
 
 
+def _git_changed_wiki_files(clone_dir: Path, old_commit: str | None) -> tuple[list[str] | None, bool]:
+    """Diff old_commit..HEAD for wiki/*.md changes.
+
+    Returns (changed_paths, any_deleted). changed_paths is None when the diff
+    is unavailable (no old commit, or git diff failed) — caller should reindex.
+    Renames count as a deletion of the old path plus a change of the new one.
+    """
+    if not old_commit:
+        return (None, False)
+    d = subprocess.run(["git", "diff", "--name-status", old_commit, "HEAD"],
+                       cwd=str(clone_dir), capture_output=True, text=True)
+    if d.returncode != 0:
+        return (None, False)
+
+    def _is_wiki_md(fname: str) -> bool:
+        return fname.startswith("wiki/") and fname.endswith(".md")
+
+    changed: list[str] = []
+    deleted = False
+    for line in d.stdout.strip().split("\n"):
+        if not line:
+            continue
+        status, _, rest = line.partition("\t")
+        if status.startswith("R"):  # rename: "R100\told\tnew"
+            old_name, _, new_name = rest.partition("\t")
+            if _is_wiki_md(old_name):
+                deleted = True
+            if _is_wiki_md(new_name):
+                changed.append(new_name)
+        elif status.startswith("C"):  # copy: "C100\tsrc\tnew" — src still exists
+            _, _, new_name = rest.partition("\t")
+            if _is_wiki_md(new_name):
+                changed.append(new_name)
+        elif status.startswith("D"):
+            if _is_wiki_md(rest):
+                deleted = True
+        else:  # A / M / T
+            if _is_wiki_md(rest):
+                changed.append(rest)
+    return (changed, deleted)
+
+
 def _pull_git(w: dict, today: str, backend: str | None, model: str | None,
               decisions: dict[str, str]) -> bool:
     """Mutates w in place. Raises _PullUnreachable on access failure.
@@ -718,7 +874,8 @@ def _pull_git(w: dict, today: str, backend: str | None, model: str | None,
     clone_dir = CONNECTED_DIR / w["id"]
     if not clone_dir.exists():
         clone_dir.parent.mkdir(parents=True, exist_ok=True)
-        r = subprocess.run(["git", "clone", "--", w["source"], str(clone_dir)],
+        r = subprocess.run(["git", "-c", "protocol.ext.allow=never",
+                            "clone", "--", w["source"], str(clone_dir)],
                            capture_output=True, text=True)
         if r.returncode != 0:
             raise _PullUnreachable(r.stderr)
@@ -737,17 +894,21 @@ def _pull_git(w: dict, today: str, backend: str | None, model: str | None,
 
     branch = _detect_default_branch(clone_dir)
 
-    r = subprocess.run(["git", "fetch", "origin", branch],
+    r = subprocess.run(["git", "-c", "protocol.ext.allow=never",
+                        "fetch", "origin", branch],
                        cwd=str(clone_dir), capture_output=True, text=True)
     if r.returncode != 0:
         raise _PullUnreachable(r.stderr)
 
     old_commit = w.get("commit")
-    subprocess.run(["git", "reset", "--hard", f"origin/{branch}"],
-                   cwd=str(clone_dir), capture_output=True, check=False)
+    r = subprocess.run(["git", "reset", "--hard", f"origin/{branch}"],
+                       cwd=str(clone_dir), capture_output=True, text=True)
+    if r.returncode != 0:
+        # A swallowed reset would report a silent no-op as a successful pull.
+        raise _PullUnreachable(f"git reset failed: {r.stderr}")
     new_commit = _git_head_sha(clone_dir)
 
-    coll = f"wiki-ext-{w['id']}"
+    coll = _ext_collection_name(w["id"])
 
     if mismatch_decision == "reindex":
         _checked_reindex(str(clone_dir / "wiki"), coll, w["id"])
@@ -757,18 +918,17 @@ def _pull_git(w: dict, today: str, backend: str | None, model: str | None,
 
     # If we already did a full reindex above, skip the diff/full-reindex pass below.
     if mismatch_decision != "reindex":
-        if old_commit:
-            d = subprocess.run(["git", "diff", "--name-only", old_commit, "HEAD"],
-                               cwd=str(clone_dir), capture_output=True, text=True)
-            if d.returncode == 0:
-                for fname in d.stdout.strip().split("\n"):
-                    if not fname or not fname.startswith("wiki/") or not fname.endswith(".md"):
-                        continue
-                    _checked_add_page(str(clone_dir / fname), coll, w["id"])
-            else:
-                _checked_reindex(str(clone_dir / "wiki"), coll, w["id"])
-        else:
+        changed, deleted = _git_changed_wiki_files(clone_dir, old_commit)
+        # Deletions/renames need a full rebuild (incremental --add can only
+        # upsert, never remove — stale pages would keep surfacing in search).
+        # Above the limit, N per-file subprocesses (one model load each) cost
+        # more than one reindex.
+        if changed is None or deleted or len(changed) > _INCREMENTAL_ADD_LIMIT:
             _checked_reindex(str(clone_dir / "wiki"), coll, w["id"])
+        else:
+            for fname in changed:
+                _checked_add_page(str(clone_dir / fname), coll, w["id"],
+                                  wiki_root=str(clone_dir / "wiki"))
 
     w["last_pulled"] = today
     w["commit"] = new_commit
@@ -785,16 +945,28 @@ def _pull_local(w: dict, today: str, backend: str | None, model: str | None) -> 
     last_pulled = w.get("last_pulled", "1970-01-01")
     # Note: last_pulled is date-only (YYYY-MM-DD); midnight-local granularity is
     # acceptable per spec — same-day double pull may skip files modified mid-day.
-    threshold = datetime.fromisoformat(last_pulled).timestamp()
+    try:
+        threshold = datetime.fromisoformat(last_pulled).timestamp()
+    except ValueError:
+        threshold = 0.0  # malformed timestamp → treat as never pulled
 
     wiki_subdir = src / "wiki"
     if not wiki_subdir.exists():
         raise _PullUnreachable(f"no wiki/ in {src}")
 
-    coll = f"wiki-ext-{w['id']}"
-    for md in wiki_subdir.rglob("*.md"):
-        if md.stat().st_mtime > threshold:
-            _checked_add_page(str(md), coll, w["id"])
+    coll = _ext_collection_name(w["id"])
+    modified = [md for md in wiki_subdir.rglob("*.md")
+                if md.stat().st_mtime > threshold]
+    # Reindex instead of per-file adds when (a) indexed files vanished from
+    # disk (incremental --add can't remove stale entries) or (b) the change
+    # set is large enough that N model-loading subprocesses cost more than
+    # one full rebuild.
+    if (_indexed_files_missing(INDEX_PATH, coll)
+            or len(modified) > _INCREMENTAL_ADD_LIMIT):
+        _checked_reindex(str(wiki_subdir), coll, w["id"])
+    else:
+        for md in modified:
+            _checked_add_page(str(md), coll, w["id"], wiki_root=str(wiki_subdir))
 
     if backend and model:
         w["embedding_backend"] = backend
@@ -811,7 +983,9 @@ _PULL_MUTABLE_FIELDS = (
 
 
 def cmd_pull(decisions: dict[str, str]) -> int:
-    cmd_init()
+    rc = cmd_init()
+    if rc != 0:
+        return rc
 
     cfg = load_config(CONFIG_PATH)
     today = date.today().isoformat()
