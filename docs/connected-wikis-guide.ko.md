@@ -6,6 +6,38 @@
 
 ---
 
+## 0. 바로 해보기 — 공개 샘플 위키 `Laeyoung/den`
+
+친구의 wiki가 아직 없어도 됩니다. 이 기능의 E2E 검증에 사용된 공개 샘플 위키
+[`Laeyoung/den`](https://github.com/Laeyoung/den)(커피 지식 위키, 페이지 3개)이 준비되어 있습니다.
+main 브랜치를 받고 [환경 설정](../WIKI_SCHEMA.md#setup)만 마쳤다면 그대로 실행해 보세요.
+
+```bash
+# 1) 연결 — README 미리보기와 함께 신뢰 확인 프롬프트가 뜹니다 (exit 4)
+venv/bin/python tools/connected_wikis.py connect https://github.com/Laeyoung/den --id den
+# PROMPT: consent | Trust external wiki 'den' content? ...
+# OPTIONS: accept reject
+
+# 2) 내용을 확인했으면 승인과 함께 재호출 — 클론 → 인덱싱 → Connected: den
+venv/bin/python tools/connected_wikis.py connect https://github.com/Laeyoung/den --id den --decision consent=accept
+
+# 3) 연결 상태 확인 (pages: 3)
+venv/bin/python tools/connected_wikis.py list
+
+# 4) 내 wiki + den 통합 검색 — den의 커피 페이지가 상위에 나옵니다
+venv/bin/python tools/search.py --query "에스프레소 추출 시간과 분쇄도" --collections wiki,wiki-ext-den
+# connected-wikis/den/wiki/concepts/espresso-extraction.md [wiki: wiki-ext-den] [score: 0.48]
+# ...
+
+# 5) 실험이 끝나면 정리
+venv/bin/python tools/connected_wikis.py disconnect den
+```
+
+첫 실행이라면 임베딩 모델(~470MB) 다운로드로 수 분 걸릴 수 있습니다(§1.2 참고).
+아래부터는 이 과정 하나하나가 무엇을 하는지, 실제 상황(친구의 wiki 연결)에 어떻게 쓰는지를 설명합니다.
+
+---
+
 ## 1. 사전 준비
 
 ### 1.1 두 개의 seojae 인스턴스
@@ -16,6 +48,7 @@
 |---|---|---|
 | **Git 원격** | `https://github.com/friend/spain-travel-wiki` | 클론 → 인덱싱. `pull`로 동기화 |
 | **로컬 경로** | `/Users/me/another-wiki` | mtime 기반 동기화. 같은 머신의 다른 seojae 폴더 |
+| **공개 샘플** | `https://github.com/Laeyoung/den` | 바로 테스트용 커피 지식 위키 (§0 참고) |
 
 외부 wiki는 seojae 구조(`wiki/` 디렉토리에 frontmatter 있는 `*.md` 페이지들)를 따라야 합니다.
 

@@ -157,7 +157,12 @@ LLM instructions that are loaded alongside the core schema.
 - `search-chromadb.md` — Semantic search backend (ChromaDB + sentence-transformers)
 - `obsidian.md` — Obsidian vault integration
 - `connected-wikis.md` — Toggle external seojae wikis as extended knowledge sources
-  ([사용 가이드](docs/connected-wikis-guide.ko.md))
+  ([사용 가이드](docs/connected-wikis-guide.ko.md)). Try it right away with the public
+  sample wiki [`Laeyoung/den`](https://github.com/Laeyoung/den):
+  ```bash
+  venv/bin/python tools/connected_wikis.py connect https://github.com/Laeyoung/den --id den --decision consent=accept
+  venv/bin/python tools/search.py --query "espresso extraction" --collections wiki,wiki-ext-den
+  ```
 
 See [extensions/README.md](extensions/README.md) for details on creating your own.
 

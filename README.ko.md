@@ -157,7 +157,12 @@ venv/bin/python tools/search.py --reindex
 - `search-chromadb.md` — 시맨틱 검색 백엔드 (ChromaDB + sentence-transformers)
 - `obsidian.md` — Obsidian vault 연동
 - `connected-wikis.md` — 외부 seojae wiki를 토글 가능한 확장 지식 저장소로 연결
-  ([사용 가이드](docs/connected-wikis-guide.ko.md))
+  ([사용 가이드](docs/connected-wikis-guide.ko.md)). 공개 샘플 위키
+  [`Laeyoung/den`](https://github.com/Laeyoung/den)으로 바로 테스트할 수 있습니다:
+  ```bash
+  venv/bin/python tools/connected_wikis.py connect https://github.com/Laeyoung/den --id den --decision consent=accept
+  venv/bin/python tools/search.py --query "에스프레소 추출" --collections wiki,wiki-ext-den
+  ```
 
 직접 만들고 싶다면 [extensions/README.md](extensions/README.md)를 참고하세요.
 
