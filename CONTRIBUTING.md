@@ -4,6 +4,9 @@ Thank you for your interest in contributing to Seojae! This guide covers
 how to get started, what kinds of contributions we accept, and the conventions
 we follow.
 
+By participating in this project, you agree to abide by our
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## How to Contribute
 
 **Issues** — We welcome bug reports, feature requests, and extension ideas.
@@ -23,7 +26,7 @@ faster and keeps the git history readable.
 
 ```bash
 # Clone the repository
-git clone https://github.com/Laeyoung/seojae.git
+git clone https://github.com/VibeVista/seojae.git
 cd seojae
 
 # Create a virtual environment

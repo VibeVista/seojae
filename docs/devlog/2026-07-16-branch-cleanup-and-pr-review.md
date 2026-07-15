@@ -103,7 +103,7 @@ E2E 픽스처로 만든 `Laeyoung/den`을 **공식 온보딩 샘플로 승격**:
 
 - **`connected-wikis.json`을 미리 심지 않음** — 커밋된 config는 신뢰 경계라 첫 `pull`이 consent 게이트 없이 클론하게 됨. 문서 안내 방식이 사용자가 신뢰 확인 흐름을 그대로 경험하게 한다.
 - **문서 명령 스타일 정리** (사용자 피드백): 사람이 따라 하는 문서(README, 가이드)는 `source venv/bin/activate` 한 번 + `python`으로 통일. **LLM이 실행하는 스펙**(WIKI_SCHEMA 워크플로 기본 커맨드, extensions의 `commands:` 필드)은 `venv/bin/python` full path 유지 — Codex 등에서 venv 활성화가 명령 간 유지되지 않기 때문.
-- **`Laeyoung/den` 재생성**: 초기 커밋이 회사 계정(laeyoung@comcom.ai)으로 작성돼 개인 계정(gadise@gmail.com)으로 히스토리 재작성 + force push. GitHub Contributors 캐시가 남아 repo를 삭제 후 동일 내용으로 재생성함. 커피 지식 3페이지(espresso-extraction, cold-brew, ethiopia-yirgacheffe).
+- **`Laeyoung/den` 재생성**: 초기 커밋이 회사 계정으로 작성돼 개인 계정으로 히스토리 재작성 + force push. GitHub Contributors 캐시가 남아 repo를 삭제 후 동일 내용으로 재생성함. 커피 지식 3페이지(espresso-extraction, cold-brew, ethiopia-yirgacheffe).
 
 ## 리뷰 방법론 메모 (다음에 참고)
 

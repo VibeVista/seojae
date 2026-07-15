@@ -1,0 +1,41 @@
+name: Bug report
+description: Something isn't working as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Say "ingest raw/articles/example.md" to the LLM tool
+        2. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: llm-tool
+    attributes:
+      label: LLM coding tool
+      options:
+        - Claude Code
+        - Codex CLI
+        - Gemini CLI
+        - Other / not tool-related
+    validations:
+      required: true
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      placeholder: "3.12.4"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output or logs
+      render: shell
