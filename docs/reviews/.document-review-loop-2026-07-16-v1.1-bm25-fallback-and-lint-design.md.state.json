@@ -1,0 +1,17 @@
+{
+  "loop": "document-review-loop",
+  "scope": {
+    "target": "/Users/laeyoung/Documents/personal/seojae/docs/superpowers/specs/2026-07-16-v1.1-bm25-fallback-and-lint-design.md",
+    "reference": null
+  },
+  "started_at_epoch": 1784207749,
+  "started_at_iso": "2026-07-16T13:15:49Z",
+  "last_iteration_at_epoch": 1784210560,
+  "iteration": 10,
+  "counter": 2,
+  "threshold": 92,
+  "dimensions": ["accuracy-vs-code", "internal-consistency", "design-feasibility", "completeness-rollout"],
+  "fixed_running_total": { "critical": 1, "major": 23, "minor": 1 },
+  "agent_failures_last_iter": [],
+  "status": "completed-clean"
+}
